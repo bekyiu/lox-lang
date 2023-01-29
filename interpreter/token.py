@@ -1,3 +1,4 @@
+from __future__ import annotations
 from enum import Enum, unique
 
 
@@ -51,11 +52,69 @@ class TokenType(Enum):
 
     EOF = 400
 
+    SYMBOL_MAP: dict[str, TokenType]
+    KEYWORD_MAP: dict[str, TokenType]
+
+    @staticmethod
+    def static_init():
+        TokenType.SYMBOL_MAP = {
+            '(': TokenType.LEFT_PAREN,
+            ')': TokenType.RIGHT_PAREN,
+            '{': TokenType.LEFT_BRACE,
+            '}': TokenType.RIGHT_BRACE,
+            ',': TokenType.COMMA,
+            '.': TokenType.DOT,
+            '-': TokenType.MINUS,
+            '+': TokenType.PLUS,
+            ';': TokenType.SEMICOLON,
+            '/': TokenType.SLASH,
+            '*': TokenType.STAR,
+
+            '!': TokenType.BANG,
+            '!=': TokenType.BANG_EQUAL,
+            '=': TokenType.EQUAL,
+            '==': TokenType.EQUAL_EQUAL,
+            '>': TokenType.GREATER,
+            '>=': TokenType.GREATER_EQUAL,
+            '<': TokenType.LESS,
+            '<=': TokenType.LESS_EQUAL,
+        }
+
+        TokenType.KEYWORD_MAP = {
+            "and": TokenType.AND,
+            "class": TokenType.CLASS,
+            "else": TokenType.ELSE,
+            "false": TokenType.FALSE,
+            "fun": TokenType.FUN,
+            "for": TokenType.FOR,
+            "if": TokenType.IF,
+            "nil": TokenType.NIL,
+            "or": TokenType.OR,
+            "print": TokenType.PRINT,
+            "return": TokenType.RETURN,
+            "super": TokenType.SUPER,
+            "this": TokenType.THIS,
+            "true": TokenType.TRUE,
+            "var": TokenType.VAR,
+            "while": TokenType.WHILE,
+        }
+
+    @staticmethod
+    def is_keyword(s: str) -> bool:
+        return s in TokenType.KEYWORD_MAP.keys()
+
+
+TokenType.static_init()
+
 
 class Token:
+    # token类型
     type: TokenType
+    # token的文本内容
     lexeme: str
+    # 字符串和数字的真实值
     literal: object
+    # 行号
     line: int
 
     def __init__(self, type, lexeme, literal, line):
