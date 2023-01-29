@@ -152,7 +152,8 @@ class Scanner:
     def _strip_number(self) -> None:
         # 123
         # 123.55
-        # todo 考虑负数, is end 判断
+        # 负数在语法分析的时候考虑
+        # todo is end 判断
         while self._peek().isdigit():
             self._advance()
 
