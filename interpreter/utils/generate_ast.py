@@ -18,25 +18,38 @@ TAB_TEXT = '    '
 def define_ast(base_classname: str, types: list[str]) -> str:
     import datetime
     types_text = ''
-
+    visitor_methods_text = ''
     for type in types:
         classname, fields_desc = type.strip().split(':')
-        type_text = define_type(base_classname, classname.strip(), fields_desc.strip())
-        types_text += type_text
+        types_text += define_type(base_classname, classname.strip(), fields_desc.strip())
+        visitor_methods_text += define_visitor(classname.strip())
 
     gen_date = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
     ast = f"""
 # generate time: {gen_date}
+from __future__ import annotations
 from abc import abstractmethod, ABCMeta
 from interpreter.token import Token
 
-# 所有表达式的抽象父类
 class Expr(metaclass=ABCMeta):
-    pass
+    @abstractmethod
+    def accept(self, visitor: Visitor) -> object:
+        pass
 
+class Visitor(metaclass=ABCMeta):
+{visitor_methods_text}
 {types_text}
     """
 
+    return ast
+
+
+def define_visitor(classname: str) -> str:
+    ast = f"""
+    @abstractmethod
+    def visit_{classname.lower()}(self, expr: {classname}) -> object:
+        pass
+    """
     return ast
 
 
@@ -54,25 +67,13 @@ def define_type(base_classname: str, classname: str, fields_desc: str) -> str:
         init_params_text += f'{name}: {type}, '
         init_body_text += f'{TAB_TEXT}{TAB_TEXT}self.{name} = {name}\n'
 
-    """
-一个例子
-
-class Binary(Expr):
-left: Expr
-operator: Token
-right: Expr
-
-def __init__(self, left: Expr, operator: Token, right: Expr):
-    self.left = left
-    self.operator = operator
-    self.right = right
-    """
-
     ast = f"""
 class {classname}({base_classname}):
 {fields_text}
     def __init__(self, {init_params_text}):
 {init_body_text}
+    def accept(self, visitor: Visitor) -> object:
+        return visitor.visit_{classname.lower()}(self)
     """
     return ast
 

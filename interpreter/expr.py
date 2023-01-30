@@ -1,12 +1,32 @@
-# generate time: 2023-01-29 20:46:05
+# generate time: 2023-01-30 20:34:48
+from __future__ import annotations
 from abc import abstractmethod, ABCMeta
-
 from interpreter.token import Token
 
 
-# 所有表达式的抽象父类
 class Expr(metaclass=ABCMeta):
-    pass
+    @abstractmethod
+    def accept(self, visitor: Visitor) -> object:
+        pass
+
+
+class Visitor(metaclass=ABCMeta):
+
+    @abstractmethod
+    def visit_binary(self, expr: Binary) -> object:
+        pass
+
+    @abstractmethod
+    def visit_grouping(self, expr: Grouping) -> object:
+        pass
+
+    @abstractmethod
+    def visit_literal(self, expr: Literal) -> object:
+        pass
+
+    @abstractmethod
+    def visit_unary(self, expr: Unary) -> object:
+        pass
 
 
 class Binary(Expr):
@@ -19,6 +39,9 @@ class Binary(Expr):
         self.operator = operator
         self.right = right
 
+    def accept(self, visitor: Visitor) -> object:
+        return visitor.visit_binary(self)
+
 
 class Grouping(Expr):
     expression: Expr
@@ -26,12 +49,18 @@ class Grouping(Expr):
     def __init__(self, expression: Expr, ):
         self.expression = expression
 
+    def accept(self, visitor: Visitor) -> object:
+        return visitor.visit_grouping(self)
+
 
 class Literal(Expr):
     value: object
 
     def __init__(self, value: object, ):
         self.value = value
+
+    def accept(self, visitor: Visitor) -> object:
+        return visitor.visit_literal(self)
 
 
 class Unary(Expr):
@@ -41,3 +70,6 @@ class Unary(Expr):
     def __init__(self, operator: Token, right: Expr, ):
         self.operator = operator
         self.right = right
+
+    def accept(self, visitor: Visitor) -> object:
+        return visitor.visit_unary(self)
