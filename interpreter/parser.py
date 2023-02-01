@@ -1,4 +1,8 @@
+from typing import Union
+
+from interpreter.error import ParseError
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping
+from interpreter.lox import Lox
 from interpreter.token import Token, TokenType
 
 """
@@ -26,7 +30,13 @@ class Parser:
         self.tokens = tokens
         self.current = 0
 
-    def parse_expression(self) -> Expr:
+    def parse(self) -> Union[Expr, None]:
+        try:
+            return self._parse_expression()
+        except ParseError as e:
+            return None
+
+    def _parse_expression(self) -> Expr:
         return self._parse_equality()
 
     def _parse_equality(self) -> Expr:
@@ -80,15 +90,19 @@ class Parser:
         if self._match_any_type(TokenType.NUMBER, TokenType.STRING):
             return Literal(self._peek_pre().literal)
         if self._match_any_type(TokenType.LEFT_PAREN):
-            expr = self.parse_expression()
+            expr = self._parse_expression()
             self._ensure(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
             return Grouping(expr)
-        raise RuntimeError('unknown token type in primary rules')
+        raise self._error(self._peek(), 'expect expression.')
 
     def _ensure(self, type: TokenType, error_msg: str) -> Token:
         if self._is_match(type):
             return self._advance()
-        raise RuntimeError(error_msg)
+        raise self._error(self._peek(), error_msg)
+
+    def _error(self, token: Token, msg: str) -> ParseError:
+        Lox.error(token=token, message=msg)
+        return ParseError(msg)
 
     def _match_any_type(self, *types) -> bool:
         for type in types:
@@ -115,3 +129,21 @@ class Parser:
 
     def _is_at_end(self) -> bool:
         return self._peek().type == TokenType.EOF
+
+    # 丢弃当前token 直到(差不多)下一条语句
+    def _synchronize(self) -> None:
+        self._advance()
+        while not self._is_at_end():
+            if self._peek_pre() == TokenType.SEMICOLON:
+                return
+            t = self._peek().type
+            if t == TokenType.CLASS or \
+                    t == TokenType.FUN or \
+                    t == TokenType.VAR or \
+                    t == TokenType.FOR or \
+                    t == TokenType.IF or \
+                    t == TokenType.WHILE or \
+                    t == TokenType.PRINT or \
+                    t == TokenType.RETURN:
+                return
+            self._advance()

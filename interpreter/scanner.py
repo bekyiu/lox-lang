@@ -26,7 +26,7 @@ class Scanner:
             self.start = self.current
             self._scan_token()
 
-        eof_token = Token(TokenType.EOF, "", None, self.line)
+        eof_token = Token(TokenType.EOF, "EOF", None, self.line)
         self.tokens.append(eof_token)
         return self.tokens
 
@@ -99,7 +99,7 @@ class Scanner:
             self._strip_identifier()
             return
 
-        Lox.error(self.line, ch, 'unexpected character')
+        Lox.error(line=self.line, where=ch, message='unexpected character')
 
     def _advance(self) -> str:
         ch = self.source[self.current]
@@ -138,7 +138,6 @@ class Scanner:
             self._advance()
 
     def _strip_string(self) -> None:
-        # todo 报错 比如字符串没有闭合 或者留到语法分析?
         # "foo"
         while (not self._is_at_end()) and (self._peek() != '"'):
             if self._peek() == '\n':
@@ -152,7 +151,6 @@ class Scanner:
     def _strip_number(self) -> None:
         # 123
         # 123.55
-        # 负数在语法分析的时候考虑
         # todo is end 判断
         while self._peek().isdigit():
             self._advance()
@@ -167,7 +165,8 @@ class Scanner:
                 self._advance()
 
         value = self.source[self.start:self.current]
-        value = float(value) if is_float else int(value)
+        # value = float(value) if is_float else int(value)
+        value = float(value)
         self._add_token(TokenType.NUMBER, value)
 
     def _strip_identifier(self) -> None:

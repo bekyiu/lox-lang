@@ -1,5 +1,6 @@
 from interpreter.expr import Visitor, Unary, Literal, Grouping, Binary, Expr
-from interpreter.token import Token, TokenType
+from interpreter.parser import Parser
+from interpreter.scanner import Scanner
 
 
 class AstPrinter(Visitor):
@@ -10,7 +11,7 @@ class AstPrinter(Visitor):
         return self.parenthesize(expr.operator.lexeme, expr.left, expr.right)
 
     def visit_grouping(self, expr: Grouping) -> object:
-        pass
+        return self.build(expr.expression)
 
     def visit_literal(self, expr: Literal) -> object:
         if expr.value is None:
@@ -18,7 +19,7 @@ class AstPrinter(Visitor):
         return str(expr.value)
 
     def visit_unary(self, expr: Unary) -> object:
-        pass
+        return self.parenthesize(expr.operator.lexeme, expr.right)
 
     def parenthesize(self, name: str, *exprs) -> str:
         ret = '('
@@ -31,10 +32,10 @@ class AstPrinter(Visitor):
 
 
 if __name__ == '__main__':
-    expr = Binary(
-        Literal(1),
-        Token(TokenType.PLUS, '+', None, 1),
-        Literal(2),
-    )
+    scanner = Scanner("((1 + 2) * (-3)) + 4 / 2")
+    tokens = scanner.scan_tokens()
+    print(tokens)
+    parser = Parser(tokens)
+    expr = parser.parse()
 
     print(AstPrinter().build(expr))
