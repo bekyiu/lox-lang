@@ -1,23 +1,39 @@
 from interpreter.error import RuntimeException
-from interpreter.expr import Visitor, Expr, Binary, Grouping, Literal, Unary
+from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt
 from interpreter.token import TokenType, Token
 from interpreter.utils.ast_printer import AstPrinter
 
 
-class Interpreter(Visitor):
-    def interpret(self, expr: Expr) -> None:
+class Interpreter(ExprVisitor, StmtVisitor):
+
+    def interpret(self, stmts: list[Stmt]) -> None:
         try:
-            val = self.evaluate(expr)
-            print(self.stringify(val))
+            for stmt in stmts:
+                self.execute(stmt)
         except RuntimeException as e:
             Lox.runtime_error(e)
+
+    def execute(self, stmt: Stmt) -> None:
+        stmt.accept(self)
+
+    def visit_expression(self, stmt: Expression) -> object:
+        self.evaluate(stmt.expression)
+        return None
+
+    def visit_print(self, stmt: Print) -> object:
+        val = self.evaluate(stmt.expression)
+        print(self.stringify(val))
+        return None
 
     def stringify(self, val: object) -> str:
         if val is None:
             return 'nil'
+        if isinstance(val, bool):
+            return str(val).lower()
         return str(val)
 
     def evaluate(self, expr: Expr) -> object:
@@ -105,12 +121,15 @@ class Interpreter(Visitor):
 
 
 if __name__ == '__main__':
-    scanner = Scanner('((1 + 2) * (-3)) + 4 / 0.5')
+    scanner = Scanner("""
+    print true;
+    print 1 + 2 * 3;
+    print "hahaha";
+    """)
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)
-    expr = parser.parse()
+    stmts = parser.parse()
 
-    print(AstPrinter().build(expr))
-    Interpreter().interpret(expr)
-
+    # print(AstPrinter().build(expr))
+    Interpreter().interpret(stmts)

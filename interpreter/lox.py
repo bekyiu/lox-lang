@@ -53,8 +53,8 @@ class Lox:
         scanner = Scanner(source)
         tokens = scanner.scan_tokens()
         parser = Parser(tokens)
-        expr = parser.parse()
+        stmts = parser.parse()
         if Lox.had_error:
             return
-        print(AstPrinter().build(expr))
-        Interpreter().interpret(expr)
+        # print(AstPrinter().build(expr))
+        Interpreter().interpret(stmts)

@@ -12,6 +12,16 @@ operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
                | "+"  | "-"  | "*" | "/" ;
 """
 
+"""
+program        → statement* EOF ;
+
+statement      → exprStmt
+               | printStmt ;
+
+exprStmt       → expression ";" ;
+printStmt      → "print" expression ";" ;
+"""
+
 TAB_TEXT = '    '
 
 
@@ -22,7 +32,7 @@ def define_ast(base_classname: str, types: list[str]) -> str:
     for type in types:
         classname, fields_desc = type.strip().split(':')
         types_text += define_type(base_classname, classname.strip(), fields_desc.strip())
-        visitor_methods_text += define_visitor(classname.strip())
+        visitor_methods_text += define_visitor(base_classname, classname.strip())
 
     gen_date = datetime.datetime.strftime(datetime.datetime.now(), '%Y-%m-%d %H:%M:%S')
     ast = f"""
@@ -31,12 +41,12 @@ from __future__ import annotations
 from abc import abstractmethod, ABCMeta
 from interpreter.token import Token
 
-class Expr(metaclass=ABCMeta):
+class {base_classname}(metaclass=ABCMeta):
     @abstractmethod
-    def accept(self, visitor: Visitor) -> object:
+    def accept(self, visitor: {base_classname}Visitor) -> object:
         pass
 
-class Visitor(metaclass=ABCMeta):
+class {base_classname}Visitor(metaclass=ABCMeta):
 {visitor_methods_text}
 {types_text}
     """
@@ -44,10 +54,10 @@ class Visitor(metaclass=ABCMeta):
     return ast
 
 
-def define_visitor(classname: str) -> str:
+def define_visitor(base_classname: str, classname: str) -> str:
     ast = f"""
     @abstractmethod
-    def visit_{classname.lower()}(self, expr: {classname}) -> object:
+    def visit_{classname.lower()}(self, {base_classname.lower()}: {classname}) -> object:
         pass
     """
     return ast
@@ -72,22 +82,31 @@ class {classname}({base_classname}):
 {fields_text}
     def __init__(self, {init_params_text}):
 {init_body_text}
-    def accept(self, visitor: Visitor) -> object:
+    def accept(self, visitor: {base_classname}Visitor) -> object:
         return visitor.visit_{classname.lower()}(self)
     """
     return ast
 
 
 if __name__ == '__main__':
-    ast = define_ast('Expr', [
+    # ast = define_ast('Expr', [
+    #     # 子类名: 字段类型 字段名称, ...
+    #     "Binary   : Expr left, Token operator, Expr right",
+    #     "Grouping : Expr expression",
+    #     "Literal  : object value",
+    #     "Unary    : Token operator, Expr right",
+    # ])
+    #
+    # path = '/Users/bekyiu/dev/pythonProject/lox-lang/interpreter/expr.py'
+
+    ast = define_ast('Stmt', [
         # 子类名: 字段类型 字段名称, ...
-        "Binary   : Expr left, Token operator, Expr right",
-        "Grouping : Expr expression",
-        "Literal  : object value",
-        "Unary    : Token operator, Expr right",
+        "Expression : Expr expression",
+        "Print      : Expr expression"
     ])
 
-    path = '/Users/bekyiu/dev/pythonProject/lox-lang/interpreter/expr.py'
+    path = '/Users/bekyiu/dev/pythonProject/lox-lang/interpreter/stmt.py'
+
     with open(path, 'w') as f:
         f.write(ast)
 

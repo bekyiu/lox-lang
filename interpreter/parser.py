@@ -1,8 +1,7 @@
-from typing import Union
-
 from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping
 from interpreter.lox import Lox
+from interpreter.stmt import Stmt, Print, Expression
 from interpreter.token import Token, TokenType
 
 """
@@ -20,6 +19,16 @@ primary        → NUMBER | STRING | "true" | "false" | "nil"
                | "(" expression ")" ;
 """
 
+"""
+program        → statement* EOF ;
+
+statement      → exprStmt
+               | printStmt ;
+
+exprStmt       → expression ";" ;
+printStmt      → "print" expression ";" ;
+"""
+
 
 class Parser:
     tokens: list[Token]
@@ -30,11 +39,27 @@ class Parser:
         self.tokens = tokens
         self.current = 0
 
-    def parse(self) -> Union[Expr, None]:
-        try:
-            return self._parse_expression()
-        except ParseException as e:
-            return None
+    def parse(self) -> list[Stmt]:
+        stmts = []
+        while not self._is_at_end():
+            stmts.append(self._parse_statement())
+        return stmts
+
+    def _parse_statement(self) -> Stmt:
+        if self._match_any_type(TokenType.PRINT):
+            return self._parse_print_stmt()
+
+        return self._parse_expr_stmt()
+
+    def _parse_print_stmt(self) -> Stmt:
+        expr = self._parse_expression()
+        self._ensure(TokenType.SEMICOLON, "expected ';' after print statement")
+        return Print(expr)
+
+    def _parse_expr_stmt(self) -> Stmt:
+        expr = self._parse_expression()
+        self._ensure(TokenType.SEMICOLON, "expected ';' after expression")
+        return Expression(expr)
 
     def _parse_expression(self) -> Expr:
         return self._parse_equality()

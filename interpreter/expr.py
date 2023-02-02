@@ -6,11 +6,11 @@ from interpreter.token import Token
 
 class Expr(metaclass=ABCMeta):
     @abstractmethod
-    def accept(self, visitor: Visitor) -> object:
+    def accept(self, visitor: ExprVisitor) -> object:
         pass
 
 
-class Visitor(metaclass=ABCMeta):
+class ExprVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_binary(self, expr: Binary) -> object:
@@ -39,7 +39,7 @@ class Binary(Expr):
         self.operator = operator
         self.right = right
 
-    def accept(self, visitor: Visitor) -> object:
+    def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_binary(self)
 
 
@@ -49,7 +49,7 @@ class Grouping(Expr):
     def __init__(self, expression: Expr, ):
         self.expression = expression
 
-    def accept(self, visitor: Visitor) -> object:
+    def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_grouping(self)
 
 
@@ -59,7 +59,7 @@ class Literal(Expr):
     def __init__(self, value: object, ):
         self.value = value
 
-    def accept(self, visitor: Visitor) -> object:
+    def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_literal(self)
 
 
@@ -71,5 +71,5 @@ class Unary(Expr):
         self.operator = operator
         self.right = right
 
-    def accept(self, visitor: Visitor) -> object:
+    def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_unary(self)

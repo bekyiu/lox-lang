@@ -1,7 +1,7 @@
-from interpreter.expr import Visitor, Unary, Literal, Grouping, Binary, Expr
+from interpreter.expr import ExprVisitor, Unary, Literal, Grouping, Binary, Expr
 
-
-class AstPrinter(Visitor):
+# todo
+class AstPrinter(ExprVisitor):
     def build(self, expr: Expr) -> str:
         return str(expr.accept(self))
 
