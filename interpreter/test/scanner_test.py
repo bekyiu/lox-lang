@@ -29,7 +29,7 @@ class ScannerTest(unittest.TestCase):
             'TokenType.LEFT_BRACE { None',
             'TokenType.LEFT_PAREN ( None',
             'TokenType.RIGHT_PAREN ) None',
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected)
 
@@ -51,7 +51,7 @@ class ScannerTest(unittest.TestCase):
             'TokenType.GREATER_EQUAL >= None',
             'TokenType.LESS < None',
             'TokenType.LESS_EQUAL <= None',
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected)
 
@@ -62,7 +62,7 @@ class ScannerTest(unittest.TestCase):
         """
         expected = [
             'TokenType.SLASH / None',
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected)
 
@@ -79,7 +79,7 @@ class ScannerTest(unittest.TestCase):
             """"换
             行" 换
             行""",
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected, )
 
@@ -89,9 +89,9 @@ class ScannerTest(unittest.TestCase):
             123.55
         """
         expected = [
-            'TokenType.NUMBER 123 123',
+            'TokenType.NUMBER 123 123.0',
             'TokenType.NUMBER 123.55 123.55',
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected, )
 
@@ -109,7 +109,7 @@ class ScannerTest(unittest.TestCase):
             'TokenType.NIL nil None',
             'TokenType.FOR for None',
             'TokenType.TRUE true None',
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected, )
 
@@ -118,7 +118,7 @@ class ScannerTest(unittest.TestCase):
             $
         """
         expected = [
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected, )
         # show log the error
@@ -136,23 +136,23 @@ class ScannerTest(unittest.TestCase):
             'TokenType.VAR var None',
             'TokenType.IDENTIFIER sum None',
             'TokenType.EQUAL = None',
-            'TokenType.NUMBER 0 0',
+            'TokenType.NUMBER 0 0.0',
             'TokenType.FOR for None',
             'TokenType.LEFT_PAREN ( None',
             'TokenType.VAR var None',
             'TokenType.IDENTIFIER i None',
             'TokenType.EQUAL = None',
-            'TokenType.NUMBER 1 1',
+            'TokenType.NUMBER 1 1.0',
             'TokenType.SEMICOLON ; None',
             'TokenType.IDENTIFIER i None',
             'TokenType.LESS_EQUAL <= None',
-            'TokenType.NUMBER 10 10',
+            'TokenType.NUMBER 10 10.0',
             'TokenType.SEMICOLON ; None',
             'TokenType.IDENTIFIER i None',
             'TokenType.EQUAL = None',
             'TokenType.IDENTIFIER i None',
             'TokenType.PLUS + None',
-            'TokenType.NUMBER 1 1',
+            'TokenType.NUMBER 1 1.0',
             'TokenType.RIGHT_PAREN ) None',
             'TokenType.LEFT_BRACE { None',
             'TokenType.IDENTIFIER sum None',
@@ -163,6 +163,6 @@ class ScannerTest(unittest.TestCase):
             'TokenType.RIGHT_BRACE } None',
             'TokenType.PRINT print None',
             'TokenType.IDENTIFIER sum None',
-            'TokenType.EOF  None',
+            'TokenType.EOF EOF None',
         ]
         self._run_test(source, expected, )

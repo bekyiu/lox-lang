@@ -1,6 +1,6 @@
 from typing import Union
 
-from interpreter.error import ParseError
+from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping
 from interpreter.lox import Lox
 from interpreter.token import Token, TokenType
@@ -33,7 +33,7 @@ class Parser:
     def parse(self) -> Union[Expr, None]:
         try:
             return self._parse_expression()
-        except ParseError as e:
+        except ParseException as e:
             return None
 
     def _parse_expression(self) -> Expr:
@@ -100,9 +100,9 @@ class Parser:
             return self._advance()
         raise self._error(self._peek(), error_msg)
 
-    def _error(self, token: Token, msg: str) -> ParseError:
+    def _error(self, token: Token, msg: str) -> ParseException:
         Lox.error(token=token, message=msg)
-        return ParseError(msg)
+        return ParseException(msg)
 
     def _match_any_type(self, *types) -> bool:
         for type in types:

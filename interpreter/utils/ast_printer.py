@@ -1,6 +1,4 @@
 from interpreter.expr import Visitor, Unary, Literal, Grouping, Binary, Expr
-from interpreter.parser import Parser
-from interpreter.scanner import Scanner
 
 
 class AstPrinter(Visitor):
@@ -32,6 +30,9 @@ class AstPrinter(Visitor):
 
 
 if __name__ == '__main__':
+    from interpreter.parser import Parser
+    from interpreter.scanner import Scanner
+
     scanner = Scanner("((1 + 2) * (-3)) + 4 / 2")
     tokens = scanner.scan_tokens()
     print(tokens)
