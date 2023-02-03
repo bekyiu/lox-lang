@@ -1,9 +1,10 @@
-# generate time: 2023-02-02 21:22:43
+# generate time: 2023-02-03 20:53:17
 from __future__ import annotations
 
 from abc import abstractmethod, ABCMeta
 
 from interpreter.expr import Expr
+from interpreter.token import Token
 
 
 class Stmt(metaclass=ABCMeta):
@@ -20,6 +21,10 @@ class StmtVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_print(self, stmt: Print) -> object:
+        pass
+
+    @abstractmethod
+    def visit_var(self, stmt: Var) -> object:
         pass
 
 
@@ -41,3 +46,15 @@ class Print(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> object:
         return visitor.visit_print(self)
+
+
+class Var(Stmt):
+    name: Token
+    initializer: Expr
+
+    def __init__(self, name: Token, initializer: Expr, ):
+        self.name = name
+        self.initializer = initializer
+
+    def accept(self, visitor: StmtVisitor) -> object:
+        return visitor.visit_var(self)

@@ -89,23 +89,28 @@ class {classname}({base_classname}):
 
 
 if __name__ == '__main__':
-    # ast = define_ast('Expr', [
-    #     # 子类名: 字段类型 字段名称, ...
-    #     "Binary   : Expr left, Token operator, Expr right",
-    #     "Grouping : Expr expression",
-    #     "Literal  : object value",
-    #     "Unary    : Token operator, Expr right",
-    # ])
-    #
-    # path = '/Users/bekyiu/dev/pythonProject/lox-lang/interpreter/expr.py'
+    ast = define_ast('Expr', [
+        # 子类名: 字段类型 字段名称, ...
+        "Assign   : Token name, Expr value",
+        "Binary   : Expr left, Token operator, Expr right",
+        "Grouping : Expr expression",
+        "Literal  : object value",
+        "Unary    : Token operator, Expr right",
+        "Variable : Token name",
+    ])
+
+    path = '../expr.py'
+    with open(path, 'w') as f:
+        f.write(ast)
 
     ast = define_ast('Stmt', [
         # 子类名: 字段类型 字段名称, ...
         "Expression : Expr expression",
-        "Print      : Expr expression"
+        "Print      : Expr expression",
+        "Var        : Token name, Expr initializer",
     ])
 
-    path = '/Users/bekyiu/dev/pythonProject/lox-lang/interpreter/stmt.py'
+    path = '../stmt.py'
 
     with open(path, 'w') as f:
         f.write(ast)

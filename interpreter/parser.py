@@ -1,32 +1,40 @@
 from interpreter.error import ParseException
-from interpreter.expr import Expr, Binary, Unary, Literal, Grouping
+from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign
 from interpreter.lox import Lox
-from interpreter.stmt import Stmt, Print, Expression
+from interpreter.stmt import Stmt, Print, Expression, Var
 from interpreter.token import Token, TokenType
 
 """
 每个规则仅匹配其当前优先级或更高优先级的表达式
 表达式优先级自上而下递增
 
-expression     → equality ;
+expression     → assignment ;
+assignment     → equality "=" assignment
+               | equality ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "-" | "+" ) factor )* ;
 factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | primary ;
-primary        → NUMBER | STRING | "true" | "false" | "nil"
-               | "(" expression ")" ;
+primary        → "true" | "false" | "nil"
+               | NUMBER | STRING
+               | "(" expression ")"
+               | IDENTIFIER ;
 """
 
 """
-program        → statement* EOF ;
+program        → declaration* EOF ;
+
+declaration    → varDecl
+               | statement ;
 
 statement      → exprStmt
                | printStmt ;
 
 exprStmt       → expression ";" ;
 printStmt      → "print" expression ";" ;
+varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
 """
 
 
@@ -42,8 +50,25 @@ class Parser:
     def parse(self) -> list[Stmt]:
         stmts = []
         while not self._is_at_end():
-            stmts.append(self._parse_statement())
+            stmts.append(self._parse_declaration())
         return stmts
+
+    def _parse_declaration(self) -> Stmt:
+        try:
+            if self._match_any_type(TokenType.VAR):
+                return self._parse_var_declaration()
+            return self._parse_statement()
+        except ParseException as e:
+            self._synchronize()
+            return None
+
+    def _parse_var_declaration(self) -> Stmt:
+        token = self._ensure(TokenType.IDENTIFIER, 'Expect a identifier after var.')
+        initializer = None
+        if self._match_any_type(TokenType.EQUAL):
+            initializer = self._parse_expression()
+        self._ensure(TokenType.SEMICOLON, "expected ';' after var statement")
+        return Var(token, initializer)
 
     def _parse_statement(self) -> Stmt:
         if self._match_any_type(TokenType.PRINT):
@@ -62,7 +87,18 @@ class Parser:
         return Expression(expr)
 
     def _parse_expression(self) -> Expr:
-        return self._parse_equality()
+        return self._parse_assigment()
+
+    def _parse_assigment(self) -> Expr:
+        expr = self._parse_equality()
+        if self._match_any_type(TokenType.EQUAL):
+            equal = self._peek_pre()
+            value = self._parse_assigment()
+            if isinstance(expr, Variable):
+                # = 左边是一个左值, 表明表达式的结果要存在哪, 而不对自己进行求值
+                return Assign(expr.name, value)
+            self._error(equal, 'Invalid assigment target')
+        return expr
 
     def _parse_equality(self) -> Expr:
         expr = self._parse_comparison()
@@ -118,6 +154,8 @@ class Parser:
             expr = self._parse_expression()
             self._ensure(TokenType.RIGHT_PAREN, "Expect ')' after expression.")
             return Grouping(expr)
+        if self._match_any_type(TokenType.IDENTIFIER):
+            return Variable(self._peek_pre())
         raise self._error(self._peek(), 'expect expression.')
 
     def _ensure(self, type: TokenType, error_msg: str) -> Token:

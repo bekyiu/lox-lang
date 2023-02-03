@@ -1,14 +1,19 @@
+from interpreter.env import Env
 from interpreter.error import RuntimeException
-from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary
+from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
-from interpreter.stmt import StmtVisitor, Print, Expression, Stmt
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var
 from interpreter.token import TokenType, Token
 from interpreter.utils.ast_printer import AstPrinter
 
 
 class Interpreter(ExprVisitor, StmtVisitor):
+    env: Env
+
+    def __init__(self):
+        self.env = Env()
 
     def interpret(self, stmts: list[Stmt]) -> None:
         try:
@@ -29,6 +34,13 @@ class Interpreter(ExprVisitor, StmtVisitor):
         print(self.stringify(val))
         return None
 
+    def visit_var(self, stmt: Var) -> object:
+        val = None
+        if stmt.initializer is not None:
+            val = self.evaluate(stmt.initializer)
+        self.env.define(stmt.name.lexeme, val)
+        return None
+
     def stringify(self, val: object) -> str:
         if val is None:
             return 'nil'
@@ -38,6 +50,12 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def evaluate(self, expr: Expr) -> object:
         return expr.accept(self)
+
+    def visit_assign(self, expr: Assign) -> object:
+        val = self.evaluate(expr.value)
+        self.env.assign(expr.name, val)
+        # 赋值是表达式 要返回值的
+        return val
 
     def visit_binary(self, expr: Binary) -> object:
         left = self.evaluate(expr.left)
@@ -98,6 +116,9 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
         raise RuntimeException(expr.operator, 'expect a unary expression')
 
+    def visit_variable(self, expr: Variable) -> object:
+        return self.env.get(expr.name)
+
     # 只有false和nil认为是假
     def _is_true(self, val: object) -> bool:
         if val is None:
@@ -122,9 +143,11 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
 if __name__ == '__main__':
     scanner = Scanner("""
-    print true;
-    print 1 + 2 * 3;
-    print "hahaha";
+        var a = 1;
+        var b = 2;
+        a = 9.5;
+        b = -0.5;
+        print a - b;
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

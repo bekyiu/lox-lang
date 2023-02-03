@@ -1,6 +1,8 @@
-# generate time: 2023-01-30 20:34:48
+# generate time: 2023-02-03 20:53:17
 from __future__ import annotations
+
 from abc import abstractmethod, ABCMeta
+
 from interpreter.token import Token
 
 
@@ -11,6 +13,10 @@ class Expr(metaclass=ABCMeta):
 
 
 class ExprVisitor(metaclass=ABCMeta):
+
+    @abstractmethod
+    def visit_assign(self, expr: Assign) -> object:
+        pass
 
     @abstractmethod
     def visit_binary(self, expr: Binary) -> object:
@@ -27,6 +33,22 @@ class ExprVisitor(metaclass=ABCMeta):
     @abstractmethod
     def visit_unary(self, expr: Unary) -> object:
         pass
+
+    @abstractmethod
+    def visit_variable(self, expr: Variable) -> object:
+        pass
+
+
+class Assign(Expr):
+    name: Token
+    value: Expr
+
+    def __init__(self, name: Token, value: Expr, ):
+        self.name = name
+        self.value = value
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_assign(self)
 
 
 class Binary(Expr):
@@ -73,3 +95,13 @@ class Unary(Expr):
 
     def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_unary(self)
+
+
+class Variable(Expr):
+    name: Token
+
+    def __init__(self, name: Token, ):
+        self.name = name
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_variable(self)
