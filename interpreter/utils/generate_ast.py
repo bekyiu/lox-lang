@@ -99,12 +99,13 @@ if __name__ == '__main__':
         "Variable : Token name",
     ])
 
-    path = '../expr.py'
-    with open(path, 'w') as f:
-        f.write(ast)
+    # path = '../expr.py'
+    # with open(path, 'w') as f:
+    #     f.write(ast)
 
     ast = define_ast('Stmt', [
         # 子类名: 字段类型 字段名称, ...
+        "Block      : list[Stmt] statements",
         "Expression : Expr expression",
         "Print      : Expr expression",
         "Var        : Token name, Expr initializer",

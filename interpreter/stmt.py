@@ -1,4 +1,4 @@
-# generate time: 2023-02-03 20:53:17
+# generate time: 2023-02-04 13:01:37
 from __future__ import annotations
 
 from abc import abstractmethod, ABCMeta
@@ -16,6 +16,10 @@ class Stmt(metaclass=ABCMeta):
 class StmtVisitor(metaclass=ABCMeta):
 
     @abstractmethod
+    def visit_block(self, stmt: Block) -> object:
+        pass
+
+    @abstractmethod
     def visit_expression(self, stmt: Expression) -> object:
         pass
 
@@ -26,6 +30,16 @@ class StmtVisitor(metaclass=ABCMeta):
     @abstractmethod
     def visit_var(self, stmt: Var) -> object:
         pass
+
+
+class Block(Stmt):
+    statements: list[Stmt]
+
+    def __init__(self, statements: list[Stmt], ):
+        self.statements = statements
+
+    def accept(self, visitor: StmtVisitor) -> object:
+        return visitor.visit_block(self)
 
 
 class Expression(Stmt):

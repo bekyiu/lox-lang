@@ -4,9 +4,8 @@ from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
-from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block
 from interpreter.token import TokenType, Token
-from interpreter.utils.ast_printer import AstPrinter
 
 
 class Interpreter(ExprVisitor, StmtVisitor):
@@ -40,6 +39,19 @@ class Interpreter(ExprVisitor, StmtVisitor):
             val = self.evaluate(stmt.initializer)
         self.env.define(stmt.name.lexeme, val)
         return None
+
+    def visit_block(self, stmt: Block) -> object:
+        self.execute_block(stmt.statements, Env(self.env))
+        return None
+
+    def execute_block(self, stmts: list[Stmt], env: Env) -> None:
+        pre_env = self.env
+        try:
+            self.env = env
+            for stmt in stmts:
+                self.execute(stmt)
+        finally:
+            self.env = pre_env
 
     def stringify(self, val: object) -> str:
         if val is None:
@@ -143,11 +155,25 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
 if __name__ == '__main__':
     scanner = Scanner("""
-        var a = 1;
-        var b = 2;
-        a = 9.5;
-        b = -0.5;
-        print a - b;
+        var a = "global a";
+        var b = "global b";
+        var c = "global c";
+        {
+          var a = "outer a";
+          var b = "outer b";
+          {
+            var a = "inner a";
+            print a;
+            print b;
+            print c;
+          }
+          print a;
+          print b;
+          print c;
+        }
+        print a;
+        print b;
+        print c;
     """)
     tokens = scanner.scan_tokens()
     print(tokens)
