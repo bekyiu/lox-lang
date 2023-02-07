@@ -143,7 +143,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
             self._ensure_number_operands(expr.operator, right)
             return -float(right)
         if op_type == TokenType.BANG:
-            return self._is_true(right)
+            return not self._is_true(right)
 
         raise RuntimeException(expr.operator, 'expect a unary expression')
 
@@ -177,7 +177,7 @@ if __name__ == '__main__':
         var a = 1;
         var b = 2;
         if (a + b == 3) {
-            print false and 3;
+            print !(false and 3);
         } else {
             print "error" or nil;
         }
