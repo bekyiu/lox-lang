@@ -107,6 +107,7 @@ if __name__ == '__main__':
         # 子类名: 字段类型 字段名称, ...
         "Block      : list[Stmt] statements",
         "Expression : Expr expression",
+        "If         : Expr condition, Stmt then_branch, Stmt else_branch",
         "Print      : Expr expression",
         "Var        : Token name, Expr initializer",
     ])

@@ -1,4 +1,4 @@
-# generate time: 2023-02-04 13:01:37
+# generate time: 2023-02-07 20:28:47
 from __future__ import annotations
 
 from abc import abstractmethod, ABCMeta
@@ -21,6 +21,10 @@ class StmtVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_expression(self, stmt: Expression) -> object:
+        pass
+
+    @abstractmethod
+    def visit_if(self, stmt: If) -> object:
         pass
 
     @abstractmethod
@@ -50,6 +54,20 @@ class Expression(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> object:
         return visitor.visit_expression(self)
+
+
+class If(Stmt):
+    condition: Expr
+    then_branch: Stmt
+    else_branch: Stmt
+
+    def __init__(self, condition: Expr, then_branch: Stmt, else_branch: Stmt, ):
+        self.condition = condition
+        self.then_branch = then_branch
+        self.else_branch = else_branch
+
+    def accept(self, visitor: StmtVisitor) -> object:
+        return visitor.visit_if(self)
 
 
 class Print(Stmt):

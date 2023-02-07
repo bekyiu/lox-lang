@@ -4,7 +4,7 @@ from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
-from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If
 from interpreter.token import TokenType, Token
 
 
@@ -26,6 +26,14 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_expression(self, stmt: Expression) -> object:
         self.evaluate(stmt.expression)
+        return None
+
+    def visit_if(self, stmt: If) -> object:
+        cond = self._is_true(self.evaluate(stmt.condition))
+        if cond:
+            self.execute(stmt.then_branch)
+        else:
+            self.execute(stmt.else_branch)
         return None
 
     def visit_print(self, stmt: Print) -> object:
@@ -155,25 +163,13 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
 if __name__ == '__main__':
     scanner = Scanner("""
-        var a = "global a";
-        var b = "global b";
-        var c = "global c";
-        {
-          var a = "outer a";
-          var b = "outer b";
-          {
-            var a = "inner a";
-            print a;
-            print b;
-            print c;
-          }
-          print a;
-          print b;
-          print c;
+        var a = 1;
+        var b = 2;
+        if (a + b == 4) {
+            print "ok";
+        } else {
+            print "error";
         }
-        print a;
-        print b;
-        print c;
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

@@ -1,7 +1,7 @@
 from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign
 from interpreter.lox import Lox
-from interpreter.stmt import Stmt, Print, Expression, Var, Block
+from interpreter.stmt import Stmt, Print, Expression, Var, Block, If
 from interpreter.token import Token, TokenType
 
 """
@@ -30,8 +30,12 @@ declaration    → varDecl
                | statement ;
 
 statement      → exprStmt
+               | ifStmt
                | printStmt
                | block ;
+
+ifStmt         → "if" "(" expression ")" statement
+               ( "else" statement )? ;
 
 block          → "{" declaration* "}" ;
 
@@ -74,6 +78,8 @@ class Parser:
         return Var(token, initializer)
 
     def _parse_statement(self) -> Stmt:
+        if self._match_any_type(TokenType.IF):
+            return self._parse_if_stmt()
         if self._match_any_type(TokenType.PRINT):
             return self._parse_print_stmt()
         if self._match_any_type(TokenType.LEFT_BRACE):
@@ -81,13 +87,22 @@ class Parser:
 
         return self._parse_expr_stmt()
 
+    def _parse_if_stmt(self) -> Stmt:
+        self._ensure(TokenType.LEFT_PAREN, "expect '(' after if")
+        condition = self._parse_expression()
+        self._ensure(TokenType.RIGHT_PAREN, "expect ')' after condition")
+        then_branch = self._parse_statement()
+        else_branch = None
+        if self._match_any_type(TokenType.ELSE):
+            else_branch = self._parse_statement()
+        return If(condition, then_branch, else_branch)
+
     def _parse_block(self) -> list[Stmt]:
         stmts = []
         while not self._is_at_end() and not self._is_match(TokenType.RIGHT_BRACE):
             stmts.append(self._parse_declaration())
         self._ensure(TokenType.RIGHT_BRACE, "expected '}' after block")
         return stmts
-
 
     def _parse_print_stmt(self) -> Stmt:
         expr = self._parse_expression()
