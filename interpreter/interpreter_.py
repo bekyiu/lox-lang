@@ -1,6 +1,6 @@
 from interpreter.env import Env
 from interpreter.error import RuntimeException
-from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign
+from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
@@ -76,6 +76,17 @@ class Interpreter(ExprVisitor, StmtVisitor):
         self.env.assign(expr.name, val)
         # 赋值是表达式 要返回值的
         return val
+
+    def visit_logical(self, expr: Logical) -> object:
+        left = self.evaluate(expr.left)
+        # 短路逻辑
+        if expr.operator.type == TokenType.OR:
+            if self._is_true(left):
+                return left
+        else:
+            if not self._is_true(left):
+                return left
+        return self.evaluate(expr.right)
 
     def visit_binary(self, expr: Binary) -> object:
         left = self.evaluate(expr.left)
@@ -165,10 +176,10 @@ if __name__ == '__main__':
     scanner = Scanner("""
         var a = 1;
         var b = 2;
-        if (a + b == 4) {
-            print "ok";
+        if (a + b == 3) {
+            print false and 3;
         } else {
-            print "error";
+            print "error" or nil;
         }
     """)
     tokens = scanner.scan_tokens()

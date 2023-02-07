@@ -1,4 +1,4 @@
-# generate time: 2023-02-03 20:53:17
+# generate time: 2023-02-07 21:03:32
 from __future__ import annotations
 
 from abc import abstractmethod, ABCMeta
@@ -28,6 +28,10 @@ class ExprVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_literal(self, expr: Literal) -> object:
+        pass
+
+    @abstractmethod
+    def visit_logical(self, expr: Logical) -> object:
         pass
 
     @abstractmethod
@@ -83,6 +87,20 @@ class Literal(Expr):
 
     def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_literal(self)
+
+
+class Logical(Expr):
+    left: Expr
+    operator: Token
+    right: Expr
+
+    def __init__(self, left: Expr, operator: Token, right: Expr, ):
+        self.left = left
+        self.operator = operator
+        self.right = right
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_logical(self)
 
 
 class Unary(Expr):

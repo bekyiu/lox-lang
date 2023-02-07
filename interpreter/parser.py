@@ -1,5 +1,5 @@
 from interpreter.error import ParseException
-from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign
+from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical
 from interpreter.lox import Lox
 from interpreter.stmt import Stmt, Print, Expression, Var, Block, If
 from interpreter.token import Token, TokenType
@@ -9,8 +9,11 @@ from interpreter.token import Token, TokenType
 表达式优先级自上而下递增
 
 expression     → assignment ;
-assignment     → equality "=" assignment
-               | equality ;
+expression     → assignment ;
+assignment     → IDENTIFIER "=" assignment
+               | logic_or ;
+logic_or       → logic_and ( "or" logic_and )* ;
+logic_and      → equality ( "and" equality )* ;
 equality       → comparison ( ( "!=" | "==" ) comparison )* ;
 comparison     → term ( ( ">" | ">=" | "<" | "<=" ) term )* ;
 term           → factor ( ( "-" | "+" ) factor )* ;
@@ -79,15 +82,15 @@ class Parser:
 
     def _parse_statement(self) -> Stmt:
         if self._match_any_type(TokenType.IF):
-            return self._parse_if_stmt()
+            return self._parse_if()
         if self._match_any_type(TokenType.PRINT):
-            return self._parse_print_stmt()
+            return self._parse_print()
         if self._match_any_type(TokenType.LEFT_BRACE):
             return Block(self._parse_block())
 
         return self._parse_expr_stmt()
 
-    def _parse_if_stmt(self) -> Stmt:
+    def _parse_if(self) -> Stmt:
         self._ensure(TokenType.LEFT_PAREN, "expect '(' after if")
         condition = self._parse_expression()
         self._ensure(TokenType.RIGHT_PAREN, "expect ')' after condition")
@@ -104,7 +107,7 @@ class Parser:
         self._ensure(TokenType.RIGHT_BRACE, "expected '}' after block")
         return stmts
 
-    def _parse_print_stmt(self) -> Stmt:
+    def _parse_print(self) -> Stmt:
         expr = self._parse_expression()
         self._ensure(TokenType.SEMICOLON, "expected ';' after print statement")
         return Print(expr)
@@ -118,7 +121,7 @@ class Parser:
         return self._parse_assigment()
 
     def _parse_assigment(self) -> Expr:
-        expr = self._parse_equality()
+        expr = self._parse_or()
         if self._match_any_type(TokenType.EQUAL):
             equal = self._peek_pre()
             value = self._parse_assigment()
@@ -127,6 +130,22 @@ class Parser:
                 return Assign(expr.name, value)
             self._error(equal, 'Invalid assigment target')
         return expr
+
+    def _parse_or(self) -> Expr:
+        left = self._parse_and()
+        while self._match_any_type(TokenType.OR):
+            op = self._peek_pre()
+            right = self._parse_and()
+            left = Logical(left, op, right)
+        return left
+
+    def _parse_and(self) -> Expr:
+        left = self._parse_equality()
+        while self._match_any_type(TokenType.AND):
+            op = self._peek_pre()
+            right = self._parse_equality()
+            left = Logical(left, op, right)
+        return left
 
     def _parse_equality(self) -> Expr:
         expr = self._parse_comparison()

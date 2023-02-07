@@ -95,13 +95,14 @@ if __name__ == '__main__':
         "Binary   : Expr left, Token operator, Expr right",
         "Grouping : Expr expression",
         "Literal  : object value",
+        "Logical  : Expr left, Token operator, Expr right",
         "Unary    : Token operator, Expr right",
         "Variable : Token name",
     ])
 
-    # path = '../expr.py'
-    # with open(path, 'w') as f:
-    #     f.write(ast)
+    path = '../expr.py'
+    with open(path, 'w') as f:
+        f.write(ast)
 
     ast = define_ast('Stmt', [
         # 子类名: 字段类型 字段名称, ...
@@ -112,9 +113,9 @@ if __name__ == '__main__':
         "Var        : Token name, Expr initializer",
     ])
 
-    path = '../stmt.py'
-
-    with open(path, 'w') as f:
-        f.write(ast)
+    # path = '../stmt.py'
+    #
+    # with open(path, 'w') as f:
+    #     f.write(ast)
 
     print('ok!!')
