@@ -1,4 +1,4 @@
-# generate time: 2023-02-07 20:28:47
+# generate time: 2023-02-08 20:15:21
 from __future__ import annotations
 
 from abc import abstractmethod, ABCMeta
@@ -29,6 +29,10 @@ class StmtVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_print(self, stmt: Print) -> object:
+        pass
+
+    @abstractmethod
+    def visit_while(self, stmt: While) -> object:
         pass
 
     @abstractmethod
@@ -78,6 +82,18 @@ class Print(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> object:
         return visitor.visit_print(self)
+
+
+class While(Stmt):
+    condition: Expr
+    body: Stmt
+
+    def __init__(self, condition: Expr, body: Stmt, ):
+        self.condition = condition
+        self.body = body
+
+    def accept(self, visitor: StmtVisitor) -> object:
+        return visitor.visit_while(self)
 
 
 class Var(Stmt):

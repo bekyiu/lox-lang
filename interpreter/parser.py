@@ -1,7 +1,7 @@
 from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical
 from interpreter.lox import Lox
-from interpreter.stmt import Stmt, Print, Expression, Var, Block, If
+from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While
 from interpreter.token import Token, TokenType
 
 """
@@ -33,9 +33,17 @@ declaration    → varDecl
                | statement ;
 
 statement      → exprStmt
+               | forStmt
                | ifStmt
                | printStmt
+               | whileStmt
                | block ;
+
+forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
+                 expression? ";"
+                 expression? ")" statement ;
+
+whileStmt      → "while" "(" expression ")" statement ;
 
 ifStmt         → "if" "(" expression ")" statement
                ( "else" statement )? ;
@@ -81,6 +89,10 @@ class Parser:
         return Var(token, initializer)
 
     def _parse_statement(self) -> Stmt:
+        if self._match_any_type(TokenType.FOR):
+            return self._parse_for()
+        if self._match_any_type(TokenType.WHILE):
+            return self._parse_while()
         if self._match_any_type(TokenType.IF):
             return self._parse_if()
         if self._match_any_type(TokenType.PRINT):
@@ -89,6 +101,53 @@ class Parser:
             return Block(self._parse_block())
 
         return self._parse_expr_stmt()
+
+    # 语法糖 没有真正的For节点
+    def _parse_for(self) -> Stmt:
+        self._ensure(TokenType.LEFT_PAREN, "expect '(' after for")
+        initializer = None
+        if self._match_any_type(TokenType.VAR):
+            initializer = self._parse_var_declaration()
+        elif self._match_any_type(TokenType.SEMICOLON):
+            initializer = None
+        else:
+            initializer = self._parse_expr_stmt()
+
+        condition = Literal(True)
+        if not self._is_match(TokenType.SEMICOLON):
+            condition = self._parse_expression()
+        self._ensure(TokenType.SEMICOLON, "expect ';' after condition")
+
+        increment = None
+        if not self._is_match(TokenType.RIGHT_PAREN):
+            increment = self._parse_expression()
+        self._ensure(TokenType.RIGHT_PAREN, "expect ')' after clauses")
+
+        body = self._parse_statement()
+
+        """
+        desugaring to
+        {
+            initializer
+            while(condition) {
+                body
+                increment
+            }
+        }
+        """
+        if increment is not None:
+            body = Block([body, Expression(increment)])
+        body = While(condition, body)
+        if initializer is not None:
+            body = Block([initializer, body])
+        return body
+
+    def _parse_while(self) -> Stmt:
+        self._ensure(TokenType.LEFT_PAREN, "expect '(' after while")
+        condition = self._parse_expression()
+        self._ensure(TokenType.RIGHT_PAREN, "expect ')' after condition")
+        body = self._parse_statement()
+        return While(condition, body)
 
     def _parse_if(self) -> Stmt:
         self._ensure(TokenType.LEFT_PAREN, "expect '(' after if")

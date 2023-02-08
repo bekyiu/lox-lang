@@ -4,7 +4,7 @@ from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
-from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While
 from interpreter.token import TokenType, Token
 
 
@@ -26,6 +26,11 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_expression(self, stmt: Expression) -> object:
         self.evaluate(stmt.expression)
+        return None
+
+    def visit_while(self, stmt: While) -> object:
+        while self._is_true(self.evaluate(stmt.condition)):
+            self.execute(stmt.body)
         return None
 
     def visit_if(self, stmt: If) -> object:
@@ -174,13 +179,12 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
 if __name__ == '__main__':
     scanner = Scanner("""
-        var a = 1;
-        var b = 2;
-        if (a + b == 3) {
-            print !(false and 3);
-        } else {
-            print "error" or nil;
+        var sum = 0;
+        for (var i = 1; i <= 100; i = i + 1) {
+            sum = sum + i;
         }
+        print sum;
+        // print i;
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

@@ -1,27 +1,3 @@
-"""
-expression     → literal
-               | unary
-               | binary
-               | grouping ;
-
-literal        → NUMBER | STRING | "true" | "false" | "nil" ;
-grouping       → "(" expression ")" ;
-unary          → ( "-" | "!" ) expression ;
-binary         → expression operator expression ;
-operator       → "==" | "!=" | "<" | "<=" | ">" | ">="
-               | "+"  | "-"  | "*" | "/" ;
-"""
-
-"""
-program        → statement* EOF ;
-
-statement      → exprStmt
-               | printStmt ;
-
-exprStmt       → expression ";" ;
-printStmt      → "print" expression ";" ;
-"""
-
 TAB_TEXT = '    '
 
 
@@ -100,9 +76,9 @@ if __name__ == '__main__':
         "Variable : Token name",
     ])
 
-    path = '../expr.py'
-    with open(path, 'w') as f:
-        f.write(ast)
+    # path = '../expr.py'
+    # with open(path, 'w') as f:
+    #     f.write(ast)
 
     ast = define_ast('Stmt', [
         # 子类名: 字段类型 字段名称, ...
@@ -110,12 +86,13 @@ if __name__ == '__main__':
         "Expression : Expr expression",
         "If         : Expr condition, Stmt then_branch, Stmt else_branch",
         "Print      : Expr expression",
+        "While      : Expr condition, Stmt body",
         "Var        : Token name, Expr initializer",
     ])
 
-    # path = '../stmt.py'
-    #
-    # with open(path, 'w') as f:
-    #     f.write(ast)
+    path = '../stmt.py'
+
+    with open(path, 'w') as f:
+        f.write(ast)
 
     print('ok!!')
