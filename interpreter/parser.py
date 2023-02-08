@@ -1,8 +1,8 @@
 from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical
 from interpreter.lox import Lox
-from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While
-from interpreter.token import Token, TokenType
+from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue
+from interpreter.token_ import Token, TokenType
 
 """
 每个规则仅匹配其当前优先级或更高优先级的表达式
@@ -33,11 +33,16 @@ declaration    → varDecl
                | statement ;
 
 statement      → exprStmt
+               | breakStmt
+               | continueStmt
                | forStmt
                | ifStmt
                | printStmt
                | whileStmt
                | block ;
+               
+breakStmt      → "break" ";" ;
+continueStmt   → "continue" ";" ;
 
 forStmt        → "for" "(" ( varDecl | exprStmt | ";" )
                  expression? ";"
@@ -89,6 +94,10 @@ class Parser:
         return Var(token, initializer)
 
     def _parse_statement(self) -> Stmt:
+        if self._match_any_type(TokenType.BREAK):
+            return self._parse_break()
+        if self._match_any_type(TokenType.CONTINUE):
+            return self._parse_continue()
         if self._match_any_type(TokenType.FOR):
             return self._parse_for()
         if self._match_any_type(TokenType.WHILE):
@@ -101,6 +110,17 @@ class Parser:
             return Block(self._parse_block())
 
         return self._parse_expr_stmt()
+
+    def _parse_break(self) -> Stmt:
+        token = self._peek_pre()
+        self._ensure(TokenType.SEMICOLON, "expect ';' after break")
+        return Break(token)
+
+    def _parse_continue(self) -> Stmt:
+        token = self._peek_pre()
+        raise self._error(token, 'not impl now')
+        # self._ensure(TokenType.SEMICOLON, "expect ';' after continue")
+        # return Continue(token)
 
     # 语法糖 没有真正的For节点
     def _parse_for(self) -> Stmt:
@@ -126,7 +146,7 @@ class Parser:
         body = self._parse_statement()
 
         """
-        desugaring to
+        de-sugaring to
         {
             initializer
             while(condition) {

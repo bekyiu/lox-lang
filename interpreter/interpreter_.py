@@ -4,8 +4,8 @@ from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
-from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While
-from interpreter.token import TokenType, Token
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break
+from interpreter.token_ import TokenType, Token
 
 
 class Interpreter(ExprVisitor, StmtVisitor):
@@ -28,16 +28,31 @@ class Interpreter(ExprVisitor, StmtVisitor):
         self.evaluate(stmt.expression)
         return None
 
+    # 这里可以考虑把这种只有一个关键字的语句抽象到同一个ast节点中
+    def visit_break(self, stmt: Break) -> None:
+        raise RuntimeException(stmt.break_, 'break control flow')
+
+    def visit_continue(self, stmt: Continue) -> None:
+        pass
+
     def visit_while(self, stmt: While) -> object:
         while self._is_true(self.evaluate(stmt.condition)):
-            self.execute(stmt.body)
+            try:
+                self.execute(stmt.body)
+            except RuntimeException as e:
+                # 这个issue讨论了break和continue的实现
+                # https://github.com/munificent/craftinginterpreters/issues/119
+                if e.token.type == TokenType.BREAK:
+                    print(e.msg + ',zz')
+                    break
         return None
 
     def visit_if(self, stmt: If) -> object:
         cond = self._is_true(self.evaluate(stmt.condition))
         if cond:
             self.execute(stmt.then_branch)
-        else:
+            return None
+        if stmt.else_branch is not None:
             self.execute(stmt.else_branch)
         return None
 
@@ -180,11 +195,14 @@ class Interpreter(ExprVisitor, StmtVisitor):
 if __name__ == '__main__':
     scanner = Scanner("""
         var sum = 0;
-        for (var i = 1; i <= 100; i = i + 1) {
+        
+        for (var i = 0; i <= 100; i = i + 1) {
             sum = sum + i;
+            if (sum > 100) {
+                break;
+            }
         }
         print sum;
-        // print i;
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

@@ -49,6 +49,8 @@ class TokenType(Enum):
     TRUE = 313
     VAR = 314
     WHILE = 315
+    BREAK = 316
+    CONTINUE = 317
 
     EOF = 400
 
@@ -97,6 +99,8 @@ class TokenType(Enum):
             "true": TokenType.TRUE,
             "var": TokenType.VAR,
             "while": TokenType.WHILE,
+            "break": TokenType.BREAK,
+            "continue": TokenType.CONTINUE,
         }
 
     @staticmethod

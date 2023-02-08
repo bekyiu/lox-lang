@@ -1,4 +1,4 @@
-from interpreter.token import Token
+from interpreter.token_ import Token
 
 
 class ParseException(Exception):

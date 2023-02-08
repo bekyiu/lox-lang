@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from abc import abstractmethod, ABCMeta
 
-from interpreter.token import Token
+from interpreter.token_ import Token
 
 
 class Expr(metaclass=ABCMeta):

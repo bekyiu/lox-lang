@@ -47,7 +47,11 @@ def define_type(base_classname: str, classname: str, fields_desc: str) -> str:
     init_body_text = ''
 
     for f in fields:
-        type, name = f.strip().split(' ')
+        f = f.strip()
+        if f == '':
+            init_body_text = f'{TAB_TEXT}{TAB_TEXT}pass'
+            continue
+        type, name = f.split(' ')
 
         fields_text += f'{TAB_TEXT}{name}: {type}\n'
         init_params_text += f'{name}: {type}, '
@@ -84,6 +88,8 @@ if __name__ == '__main__':
         # 子类名: 字段类型 字段名称, ...
         "Block      : list[Stmt] statements",
         "Expression : Expr expression",
+        "Break      : Token break_",
+        "Continue   : Token continue_",
         "If         : Expr condition, Stmt then_branch, Stmt else_branch",
         "Print      : Expr expression",
         "While      : Expr condition, Stmt body",

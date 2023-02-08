@@ -1,6 +1,6 @@
 from __future__ import annotations
 from interpreter.error import RuntimeException
-from interpreter.token import Token
+from interpreter.token_ import Token
 
 
 class Env:

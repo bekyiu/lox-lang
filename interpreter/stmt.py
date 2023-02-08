@@ -1,10 +1,10 @@
-# generate time: 2023-02-08 20:15:21
+# generate time: 2023-02-08 20:53:35
 from __future__ import annotations
 
 from abc import abstractmethod, ABCMeta
 
 from interpreter.expr import Expr
-from interpreter.token import Token
+from interpreter.token_ import Token
 
 
 class Stmt(metaclass=ABCMeta):
@@ -21,6 +21,14 @@ class StmtVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_expression(self, stmt: Expression) -> object:
+        pass
+
+    @abstractmethod
+    def visit_break(self, stmt: Break) -> object:
+        pass
+
+    @abstractmethod
+    def visit_continue(self, stmt: Continue) -> object:
         pass
 
     @abstractmethod
@@ -58,6 +66,26 @@ class Expression(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> object:
         return visitor.visit_expression(self)
+
+
+class Break(Stmt):
+    break_: Token
+
+    def __init__(self, break_: Token, ):
+        self.break_ = break_
+
+    def accept(self, visitor: StmtVisitor) -> object:
+        return visitor.visit_break(self)
+
+
+class Continue(Stmt):
+    continue_: Token
+
+    def __init__(self, continue_: Token, ):
+        self.continue_ = continue_
+
+    def accept(self, visitor: StmtVisitor) -> object:
+        return visitor.visit_continue(self)
 
 
 class If(Stmt):

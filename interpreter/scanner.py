@@ -1,5 +1,5 @@
 from interpreter.lox import Lox
-from interpreter.token import Token, TokenType
+from interpreter.token_ import Token, TokenType
 
 
 class Scanner:
