@@ -1,8 +1,6 @@
-# generate time: 2023-02-07 21:03:32
+# generate time: 2023-02-10 21:20:47
 from __future__ import annotations
-
 from abc import abstractmethod, ABCMeta
-
 from interpreter.token_ import Token
 
 
@@ -20,6 +18,10 @@ class ExprVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_binary(self, expr: Binary) -> object:
+        pass
+
+    @abstractmethod
+    def visit_call(self, expr: Call) -> object:
         pass
 
     @abstractmethod
@@ -67,6 +69,20 @@ class Binary(Expr):
 
     def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_binary(self)
+
+
+class Call(Expr):
+    callee: Expr
+    paren: Token
+    arguments: list[Expr]
+
+    def __init__(self, callee: Expr, paren: Token, arguments: list[Expr], ):
+        self.callee = callee
+        self.paren = paren
+        self.arguments = arguments
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_call(self)
 
 
 class Grouping(Expr):

@@ -1,5 +1,5 @@
 from interpreter.error import ParseException
-from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical
+from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
 from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue
 from interpreter.token_ import Token, TokenType
@@ -20,10 +20,16 @@ term           → factor ( ( "-" | "+" ) factor )* ;
 factor         → unary ( ( "/" | "*" ) unary )* ;
 unary          → ( "!" | "-" ) unary
                | primary ;
+unary          → ( "!" | "-" ) unary | call ;
+
+call           → primary ( "(" arguments? ")" )* ;
+
 primary        → "true" | "false" | "nil"
                | NUMBER | STRING
                | "(" expression ")"
                | IDENTIFIER ;
+
+arguments      → expression ( "," expression )* ;
 """
 
 """
@@ -265,7 +271,29 @@ class Parser:
             op = self._peek_pre()
             right = self._parse_unary()
             return Unary(op, right)
-        return self._parse_primary()
+        return self._parse_call()
+
+    def _parse_call(self) -> Expr:
+        expr = self._parse_primary()
+        while True:
+            # 可能有这种情况 f()()
+            if self._match_any_type(TokenType.LEFT_PAREN):
+                expr = self._parse_finish_call(expr)
+            else:
+                break
+
+        return expr
+
+    def _parse_finish_call(self, callee: Expr) -> Expr:
+        args = []
+        while not self._is_match(TokenType.RIGHT_PAREN):
+            if len(args) >= 255:
+                self._error(self._peek(), 'can not have more than 255 arguments')
+
+            args.append(self._parse_expression())
+            self._match_any_type(TokenType.COMMA)
+        paren = self._ensure(TokenType.RIGHT_PAREN, "expect ')' after arguments")
+        return Call(callee, paren, args)
 
     def _parse_primary(self) -> Expr:
         if self._match_any_type(TokenType.FALSE):
