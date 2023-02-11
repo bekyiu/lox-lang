@@ -4,7 +4,7 @@ from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
-from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function
 from interpreter.token_ import TokenType, Token
 
 
@@ -73,6 +73,12 @@ class Interpreter(ExprVisitor, StmtVisitor):
         if stmt.initializer is not None:
             val = self.evaluate(stmt.initializer)
         self.env.define(stmt.name.lexeme, val)
+        return None
+
+    def visit_function(self, stmt: Function) -> object:
+        from interpreter.callable import LoxFunction
+        func = LoxFunction(stmt)
+        self.env.define(stmt.name.lexeme, func)
         return None
 
     def visit_block(self, stmt: Block) -> object:
@@ -175,6 +181,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
         raise RuntimeException(expr.operator, 'expect a unary expression')
 
     def visit_call(self, expr: Call) -> object:
+        # expr.callee是一个variable 所以会拿到env中注册好的函数
         callee = self.evaluate(expr.callee)
         args = []
         for a in expr.arguments:
@@ -217,15 +224,11 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
 if __name__ == '__main__':
     scanner = Scanner("""
-        var sum = 0;
-        
-        for (var i = 0; i <= 100; i = i + 1) {
-            sum = sum + i;
-            if (sum > 100) {
-                break;
-            }
-        }
-        print sum;
+fun sayHi(first, second) {
+    print(first + ", " + second);
+}
+
+sayHi("Dear", "asuka");
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

@@ -1,7 +1,7 @@
 from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
-from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue
+from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function
 from interpreter.token_ import Token, TokenType
 
 """
@@ -35,8 +35,10 @@ arguments      → expression ( "," expression )* ;
 """
 program        → declaration* EOF ;
 
-declaration    → varDecl
+declaration    → funDecl
+               | varDecl
                | statement ;
+
 
 statement      → exprStmt
                | breakStmt
@@ -64,6 +66,10 @@ block          → "{" declaration* "}" ;
 exprStmt       → expression ";" ;
 printStmt      → "print" expression ";" ;
 varDecl        → "var" IDENTIFIER ( "=" expression )? ";" ;
+
+funDecl        → "fun" function ;
+function       → IDENTIFIER "(" parameters? ")" block ;
+parameters     → IDENTIFIER ( "," IDENTIFIER )* ;
 """
 
 
@@ -84,12 +90,30 @@ class Parser:
 
     def _parse_declaration(self) -> Stmt:
         try:
+            if self._match_any_type(TokenType.FUN):
+                return self._parse_function("function")
             if self._match_any_type(TokenType.VAR):
                 return self._parse_var_declaration()
             return self._parse_statement()
         except ParseException as e:
             self._synchronize()
             return None
+
+    def _parse_function(self, kind: str) -> Stmt:
+        name = self._ensure(TokenType.IDENTIFIER, f'expect {kind} name')
+        self._ensure(TokenType.LEFT_PAREN, f"expect '(' after {kind} name")
+        params = []
+        while not self._is_match(TokenType.RIGHT_PAREN):
+            if len(params) >= 255:
+                self._error(self._peek(), 'can not have more than 255 parameters')
+
+            params.append(self._ensure(TokenType.IDENTIFIER, 'expect parameter name'))
+            self._match_any_type(TokenType.COMMA)
+
+        self._ensure(TokenType.RIGHT_PAREN, "expect ')' after parameters")
+        self._ensure(TokenType.LEFT_BRACE, f"expect {'{'} before {kind} body")
+        body = self._parse_block()
+        return Function(name, params, body)
 
     def _parse_var_declaration(self) -> Stmt:
         token = self._ensure(TokenType.IDENTIFIER, 'Expect a identifier after var.')

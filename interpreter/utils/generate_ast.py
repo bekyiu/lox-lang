@@ -15,7 +15,7 @@ def define_ast(base_classname: str, types: list[str]) -> str:
 # generate time: {gen_date}
 from __future__ import annotations
 from abc import abstractmethod, ABCMeta
-from interpreter.token import Token
+from interpreter.token_ import Token
 
 class {base_classname}(metaclass=ABCMeta):
     @abstractmethod
@@ -81,14 +81,15 @@ if __name__ == '__main__':
         "Variable : Token name",
     ])
 
-    path = '../expr.py'
-    with open(path, 'w') as f:
-        f.write(ast)
+    # path = '../expr.py'
+    # with open(path, 'w') as f:
+    #     f.write(ast)
 
     ast = define_ast('Stmt', [
         # 子类名: 字段类型 字段名称, ...
         "Block      : list[Stmt] statements",
         "Expression : Expr expression",
+        "Function   : Token name, list[Token] params, list[Stmt] body",
         "Break      : Token break_",
         "Continue   : Token continue_",
         "If         : Expr condition, Stmt then_branch, Stmt else_branch",
@@ -99,7 +100,7 @@ if __name__ == '__main__':
 
     path = '../stmt.py'
 
-    # with open(path, 'w') as f:
-    #     f.write(ast)
+    with open(path, 'w') as f:
+        f.write(ast)
 
     print('ok!!')
