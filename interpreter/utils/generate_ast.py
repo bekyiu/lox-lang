@@ -95,6 +95,7 @@ if __name__ == '__main__':
         "If         : Expr condition, Stmt then_branch, Stmt else_branch",
         "Print      : Expr expression",
         "While      : Expr condition, Stmt body",
+        "Return     : Token keyword, Expr value",
         "Var        : Token name, Expr initializer",
     ])
 

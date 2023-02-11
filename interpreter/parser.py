@@ -1,7 +1,7 @@
 from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
-from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function
+from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function, Return
 from interpreter.token_ import Token, TokenType
 
 """
@@ -46,8 +46,11 @@ statement      → exprStmt
                | forStmt
                | ifStmt
                | printStmt
+               | returnStmt
                | whileStmt
                | block ;
+
+returnStmt     → "return" expression? ";" ;
                
 breakStmt      → "break" ";" ;
 continueStmt   → "continue" ";" ;
@@ -124,6 +127,8 @@ class Parser:
         return Var(token, initializer)
 
     def _parse_statement(self) -> Stmt:
+        if self._match_any_type(TokenType.RETURN):
+            return self._parse_return()
         if self._match_any_type(TokenType.BREAK):
             return self._parse_break()
         if self._match_any_type(TokenType.CONTINUE):
@@ -140,6 +145,14 @@ class Parser:
             return Block(self._parse_block())
 
         return self._parse_expr_stmt()
+
+    def _parse_return(self) -> Stmt:
+        keyword = self._peek_pre()
+        value = None
+        if not self._is_match(TokenType.SEMICOLON):
+            value = self._parse_expression()
+        self._ensure(TokenType.SEMICOLON, "expect ';' after return value")
+        return Return(keyword, value)
 
     def _parse_break(self) -> Stmt:
         token = self._peek_pre()

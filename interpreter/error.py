@@ -23,3 +23,19 @@ class RuntimeException(Exception):
 
     def __repr__(self):
         return self.msg + str(self.token)
+
+
+class ReturnException(Exception):
+    value: object
+
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return f'return exception, value: {self.value}'
+
+
+class BreakException(Exception):
+
+    def __repr__(self):
+        return 'break exception'

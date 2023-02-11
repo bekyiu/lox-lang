@@ -1,10 +1,11 @@
 from interpreter.env import Env
-from interpreter.error import RuntimeException
+from interpreter.error import RuntimeException, BreakException, ReturnException
 from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
-from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function
+from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function, \
+    Return
 from interpreter.token_ import TokenType, Token
 
 
@@ -35,9 +36,16 @@ class Interpreter(ExprVisitor, StmtVisitor):
         self.evaluate(stmt.expression)
         return None
 
+    def visit_return(self, stmt: Return) -> None:
+        value = None
+        if stmt.value is not None:
+            value = self.evaluate(stmt.value)
+
+        raise ReturnException(value)
+
     # 这里可以考虑把这种只有一个关键字的语句抽象到同一个ast节点中
     def visit_break(self, stmt: Break) -> None:
-        raise RuntimeException(stmt.break_, 'break control flow')
+        raise BreakException()
 
     def visit_continue(self, stmt: Continue) -> None:
         pass
@@ -46,12 +54,10 @@ class Interpreter(ExprVisitor, StmtVisitor):
         while self._is_true(self.evaluate(stmt.condition)):
             try:
                 self.execute(stmt.body)
-            except RuntimeException as e:
+            except BreakException as e:
                 # 这个issue讨论了break和continue的实现
                 # https://github.com/munificent/craftinginterpreters/issues/119
-                if e.token.type == TokenType.BREAK:
-                    print(e.msg + ',zz')
-                    break
+                break
         return None
 
     def visit_if(self, stmt: If) -> object:
@@ -144,11 +150,16 @@ class Interpreter(ExprVisitor, StmtVisitor):
             return float(left) <= float(right)
 
         if op_type == TokenType.PLUS:
+            if (not isinstance(left, float)) and (not isinstance(left, str)):
+                raise RuntimeException(expr.operator, 'left operand must be number or string.')
+
+            if (not isinstance(right, float)) and (not isinstance(right, str)):
+                raise RuntimeException(expr.operator, 'right operand must be number or string.')
+
             if isinstance(left, float) and isinstance(right, float):
                 return float(left) + float(right)
-            if isinstance(left, str) and isinstance(right, str):
-                return str(left) + str(right)
-            raise RuntimeException(expr.operator, 'Operands must be two numbers or two strings.')
+
+            return str(left) + str(right)
 
         if op_type == TokenType.MINUS:
             self._ensure_number_operands(expr.operator, left, right)
@@ -224,11 +235,16 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
 if __name__ == '__main__':
     scanner = Scanner("""
-fun sayHi(first, second) {
-    print(first + ", " + second);
+fun fib(n) {
+  if (n <= 1) return n;
+  return fib(n - 2) + fib(n - 1);
 }
-
-sayHi("Dear", "asuka");
+var t1 = clock();
+for (var i = 0; i < 25; i = i + 1) {
+  print fib(i);
+}
+var t2 = clock();
+print "time: " + (t2 - t1) + "s"; 
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

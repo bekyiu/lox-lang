@@ -1,5 +1,6 @@
-# generate time: 2023-02-11 12:28:22
+# generate time: 2023-02-11 20:14:54
 from __future__ import annotations
+
 from abc import abstractmethod, ABCMeta
 
 from interpreter.expr import Expr
@@ -44,6 +45,10 @@ class StmtVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_while(self, stmt: While) -> object:
+        pass
+
+    @abstractmethod
+    def visit_return(self, stmt: Return) -> object:
         pass
 
     @abstractmethod
@@ -139,6 +144,18 @@ class While(Stmt):
 
     def accept(self, visitor: StmtVisitor) -> object:
         return visitor.visit_while(self)
+
+
+class Return(Stmt):
+    keyword: Token
+    value: Expr
+
+    def __init__(self, keyword: Token, value: Expr, ):
+        self.keyword = keyword
+        self.value = value
+
+    def accept(self, visitor: StmtVisitor) -> object:
+        return visitor.visit_return(self)
 
 
 class Var(Stmt):

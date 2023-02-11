@@ -2,6 +2,7 @@ import time
 from abc import ABCMeta, abstractmethod
 
 from interpreter.env import Env
+from interpreter.error import ReturnException
 from interpreter.interpreter_ import Interpreter
 from interpreter.stmt import Function
 
@@ -29,7 +30,11 @@ class LoxFunction(Callable):
             arg = arguments[i]
             env.define(param.lexeme, arg)
 
-        interpreter.execute_block(self.declaration.body, env)
+        try:
+            interpreter.execute_block(self.declaration.body, env)
+        except ReturnException as e:
+            return e.value
+
         return None
 
     def arity(self) -> int:
