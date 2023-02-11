@@ -1,6 +1,6 @@
 from interpreter.env import Env
 from interpreter.error import RuntimeException
-from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical
+from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
 from interpreter.parser import Parser
 from interpreter.scanner import Scanner
@@ -9,10 +9,17 @@ from interpreter.token_ import TokenType, Token
 
 
 class Interpreter(ExprVisitor, StmtVisitor):
+    outermost: Env
     env: Env
 
     def __init__(self):
-        self.env = Env()
+        from interpreter.callable import Clock
+        # 最外层环境
+        self.outermost = Env()
+        # 当前所在环境
+        self.env = self.outermost
+        # 注册内置函数
+        self.outermost.define('clock', Clock())
 
     def interpret(self, stmts: list[Stmt]) -> None:
         try:
@@ -166,6 +173,22 @@ class Interpreter(ExprVisitor, StmtVisitor):
             return not self._is_true(right)
 
         raise RuntimeException(expr.operator, 'expect a unary expression')
+
+    def visit_call(self, expr: Call) -> object:
+        callee = self.evaluate(expr.callee)
+        args = []
+        for a in expr.arguments:
+            args.append(self.evaluate(a))
+
+        from interpreter.callable import Callable
+        if not isinstance(callee, Callable):
+            raise RuntimeException(expr.paren, 'can only call function and class')
+
+        func: Callable = callee
+        if len(args) != func.arity():
+            raise RuntimeException(expr.paren, f'expected {func.arity()} arguments but got {len(args)}')
+
+        return func.call(self, args)
 
     def visit_variable(self, expr: Variable) -> object:
         return self.env.get(expr.name)
