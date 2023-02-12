@@ -83,7 +83,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_function(self, stmt: Function) -> object:
         from interpreter.callable import LoxFunction
-        func = LoxFunction(stmt)
+        func = LoxFunction(stmt, self.env)
         self.env.define(stmt.name.lexeme, func)
         return None
 
@@ -234,17 +234,39 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
 
 if __name__ == '__main__':
+    test1 = """
+fun makeCounter() {
+  var i = 0;
+  fun count() {
+    i = i + 1;
+    print i;
+  }
+
+  return count;
+}
+var counter = makeCounter();
+counter();
+counter();
+    """
+
+    test2 = """
+fun scope(a) {
+  var a = "local";
+  print a;
+}
+
+scope(1);
+    
+    """
     scanner = Scanner("""
 fun fib(n) {
   if (n <= 1) return n;
   return fib(n - 2) + fib(n - 1);
 }
-var t1 = clock();
-for (var i = 0; i < 25; i = i + 1) {
+
+for (var i = 0; i < 20; i = i + 1) {
   print fib(i);
 }
-var t2 = clock();
-print "time: " + (t2 - t1) + "s"; 
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

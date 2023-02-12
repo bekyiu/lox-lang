@@ -18,14 +18,19 @@ class Callable(metaclass=ABCMeta):
         pass
 
 
+# lox函数在python中的表示, 它会绑定一个名字存在环境中
 class LoxFunction(Callable):
     declaration: Function
+    closure_env: Env
 
-    def __init__(self, declaration):
+    def __init__(self, declaration, env):
         self.declaration = declaration
+        # 在创建当前这个函数的同时 保存这个函数所在的环境
+        self.closure_env = env
 
     def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
-        env = Env(interpreter.outermost)
+        # 每执行一个函数 都需要一个新的环境 来保存当前函数的局部变量
+        env = Env(self.closure_env)
         for i, param in enumerate(self.declaration.params):
             arg = arguments[i]
             env.define(param.lexeme, arg)
