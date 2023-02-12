@@ -258,7 +258,8 @@ fun scope(a) {
 scope(1);
     
     """
-    scanner = Scanner("""
+
+    test3 = """
 fun fib(n) {
   if (n <= 1) return n;
   return fib(n - 2) + fib(n - 1);
@@ -267,6 +268,22 @@ fun fib(n) {
 for (var i = 0; i < 20; i = i + 1) {
   print fib(i);
 }
+    """
+
+    scanner = Scanner("""
+fun A() {
+    var a = 99;
+    fun B() {
+        fun C() {
+            a = a + 1;
+            print a;
+        }
+        return C;
+    }
+    return B;
+}
+
+A()()();
     """)
     tokens = scanner.scan_tokens()
     print(tokens)
