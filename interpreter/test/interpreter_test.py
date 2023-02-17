@@ -58,14 +58,12 @@ A()()();
 """
 
     scanner = Scanner("""
-        // fun test() {
-        {
+        fun test() {
             var a = 10;
-            var a = 12;
             print a;
+            return a;
         }
-
-        // test();
+        test();
     """)
     tokens = scanner.scan_tokens()
     print(tokens)

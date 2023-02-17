@@ -49,6 +49,7 @@ class Lox:
         from interpreter.scanner import Scanner
         from interpreter.utils.ast_printer import AstPrinter
         from interpreter.interpreter_ import Interpreter
+        from interpreter.resolver import Resolver
 
         scanner = Scanner(source)
         tokens = scanner.scan_tokens()
@@ -57,4 +58,9 @@ class Lox:
         if Lox.had_error:
             return
         # print(AstPrinter().build(expr))
-        Interpreter().interpret(stmts)
+        interpreter = Interpreter()
+        resolver = Resolver(interpreter)
+        resolver.resolve(stmts)
+        if Lox.had_error:
+            return
+        interpreter.interpret(stmts)

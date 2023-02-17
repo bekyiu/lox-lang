@@ -1,8 +1,17 @@
+from enum import unique, Enum
+
 from interpreter.expr import ExprVisitor, Variable, Unary, Logical, Literal, Grouping, Call, Binary, Assign, Expr
+from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Var, Return, While, Print, If, Continue, Break, Function, Expression, Block, \
     Stmt
 from interpreter.token_ import Token
 from interpreter.interpreter_ import Interpreter
+
+
+@unique
+class FunctionType(Enum):
+    NONE = 0
+    FUNCTION = 1
 
 
 # 静态分析 变量绑定
@@ -10,10 +19,12 @@ class Resolver(ExprVisitor, StmtVisitor):
     interpreter: Interpreter
     # 作用域map中与key相关联的值代表的是我们是否已经结束了对变量初始化式的解析
     scope_stack: list[dict[str, bool]]
+    current_function: FunctionType
 
     def __init__(self, interpreter):
         self.interpreter = interpreter
         self.scope_stack = []
+        self.current_function = FunctionType.NONE
 
     def resolve(self, statements: list[Stmt]) -> None:
         for stmt in statements:
@@ -39,7 +50,6 @@ class Resolver(ExprVisitor, StmtVisitor):
         scope = self.scope_stack[-1]
         # 同一个作用域中禁止申明同名变量
         if name.lexeme in scope.keys():
-            from interpreter.lox import Lox
             Lox.error(token=name, message='already variable with this name in this scope.')
 
         scope[name.lexeme] = False
@@ -62,7 +72,11 @@ class Resolver(ExprVisitor, StmtVisitor):
                 return
             i -= 1
 
-    def _resolve_function(self, stmt: Function) -> None:
+    def _resolve_function(self, stmt: Function, type: FunctionType) -> None:
+        # 表明进入了函数
+        pre_func = self.current_function
+        self.current_function = type
+
         self._begin_scope()
         for param in stmt.params:
             self._declare(param)
@@ -70,6 +84,8 @@ class Resolver(ExprVisitor, StmtVisitor):
         # 静态分析中 立即遍历了函数体
         self.resolve(stmt.body)
         self._end_scope()
+
+        self.current_function = pre_func
 
     def visit_assign(self, expr: Assign) -> object:
         self._resolve_expr(expr.value)
@@ -107,7 +123,6 @@ class Resolver(ExprVisitor, StmtVisitor):
         if len(self.scope_stack) != 0 and expr.name.lexeme in self.scope_stack[-1].keys():
             var = self.scope_stack[-1][expr.name.lexeme]
             if not var:
-                from interpreter.lox import Lox
                 Lox.error(token=expr.name, message='Can not read local variable in its own initializer')
 
         self._resolve_local(expr, expr.name)
@@ -126,7 +141,7 @@ class Resolver(ExprVisitor, StmtVisitor):
     def visit_function(self, stmt: Function) -> object:
         self._declare(stmt.name)
         self._define(stmt.name)
-        self._resolve_function(stmt)
+        self._resolve_function(stmt, FunctionType.FUNCTION)
         return None
 
     def visit_break(self, stmt: Break) -> object:
@@ -152,6 +167,10 @@ class Resolver(ExprVisitor, StmtVisitor):
         return None
 
     def visit_return(self, stmt: Return) -> object:
+        # return 必须要在函数中
+        if self.current_function == FunctionType.NONE:
+            Lox.error(token=stmt.keyword, message='can not return from top level code')
+
         if stmt.value is not None:
             self._resolve_expr(stmt.value)
         return None
