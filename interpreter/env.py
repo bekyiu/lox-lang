@@ -31,3 +31,17 @@ class Env:
             return
 
         raise RuntimeException(k, f"undefined variable '{k.lexeme}'")
+
+    def get_at(self, distance: int, name: str) -> object:
+        target = self._ancestor(distance)
+        return target.value_map[name]
+
+    def assign_at(self, distance: int, name: Token, value: object) -> None:
+        target = self._ancestor(distance)
+        target.value_map[name.lexeme] = value
+
+    def _ancestor(self, distance: int) -> Env:
+        env = self
+        for i in range(0, distance):
+            env = env.parent
+        return env

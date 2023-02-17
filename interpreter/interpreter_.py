@@ -2,8 +2,6 @@ from interpreter.env import Env
 from interpreter.error import RuntimeException, BreakException, ReturnException
 from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
-from interpreter.parser import Parser
-from interpreter.scanner import Scanner
 from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function, \
     Return
 from interpreter.token_ import TokenType, Token
@@ -12,6 +10,7 @@ from interpreter.token_ import TokenType, Token
 class Interpreter(ExprVisitor, StmtVisitor):
     outermost: Env
     env: Env
+    local_map: dict[Expr, int]
 
     def __init__(self):
         from interpreter.callable import Clock
@@ -21,6 +20,11 @@ class Interpreter(ExprVisitor, StmtVisitor):
         self.env = self.outermost
         # 注册内置函数
         self.outermost.define('clock', Clock())
+        # 在当前作用域和变量定义的作用域之间隔着多少层作用域
+        self.local_map = {}
+
+    def resolve(self, expr: Expr, depth: int) -> None:
+        self.local_map[expr] = depth
 
     def interpret(self, stmts: list[Stmt]) -> None:
         try:
@@ -112,7 +116,12 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_assign(self, expr: Assign) -> object:
         val = self.evaluate(expr.value)
-        self.env.assign(expr.name, val)
+
+        if expr in self.local_map.keys():
+            distance = self.local_map[expr]
+            self.env.assign_at(distance, expr.name, val)
+        else:
+            self.outermost.assign(expr.name, val)
         # 赋值是表达式 要返回值的
         return val
 
@@ -209,7 +218,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
         return func.call(self, args)
 
     def visit_variable(self, expr: Variable) -> object:
-        return self.env.get(expr.name)
+        return self._lookup_variable(expr.name, expr)
 
     # 只有false和nil认为是假
     def _is_true(self, val: object) -> bool:
@@ -232,63 +241,8 @@ class Interpreter(ExprVisitor, StmtVisitor):
             if not isinstance(operand, float):
                 raise RuntimeException(token, 'Operand must be a number')
 
-
-if __name__ == '__main__':
-    test1 = """
-fun makeCounter() {
-  var i = 0;
-  fun count() {
-    i = i + 1;
-    print i;
-  }
-
-  return count;
-}
-var counter = makeCounter();
-counter();
-counter();
-    """
-
-    test2 = """
-fun scope(a) {
-  var a = "local";
-  print a;
-}
-
-scope(1);
-    
-    """
-
-    test3 = """
-fun fib(n) {
-  if (n <= 1) return n;
-  return fib(n - 2) + fib(n - 1);
-}
-
-for (var i = 0; i < 20; i = i + 1) {
-  print fib(i);
-}
-    """
-
-    scanner = Scanner("""
-fun A() {
-    var a = 99;
-    fun B() {
-        fun C() {
-            a = a + 1;
-            print a;
-        }
-        return C;
-    }
-    return B;
-}
-
-A()()();
-    """)
-    tokens = scanner.scan_tokens()
-    print(tokens)
-    parser = Parser(tokens)
-    stmts = parser.parse()
-
-    # print(AstPrinter().build(expr))
-    Interpreter().interpret(stmts)
+    def _lookup_variable(self, name: Token, expr: Expr) -> object:
+        if expr in self.local_map.keys():
+            distance = self.local_map[expr]
+            return self.env.get_at(distance, name.lexeme)
+        return self.outermost.get(name)
