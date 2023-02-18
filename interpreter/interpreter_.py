@@ -1,6 +1,7 @@
 from interpreter.env import Env
 from interpreter.error import RuntimeException, BreakException, ReturnException
-from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call
+from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, \
+    Set
 from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function, \
     Return, Class
@@ -225,6 +226,25 @@ class Interpreter(ExprVisitor, StmtVisitor):
             raise RuntimeException(expr.paren, f'expected {func.arity()} arguments but got {len(args)}')
 
         return func.call(self, args)
+
+    def visit_get(self, expr: Get) -> object:
+        obj = self.evaluate(expr.object)
+        from interpreter.callable import LoxInstance
+        if not isinstance(obj, LoxInstance):
+            raise RuntimeException(expr.name, 'only instance have properties')
+
+        # obj: LoxInstance = obj
+        return obj.get(expr.name)
+
+    def visit_set(self, expr: Set) -> object:
+        obj = self.evaluate(expr.object)
+        from interpreter.callable import LoxInstance
+        if not isinstance(obj, LoxInstance):
+            raise RuntimeException(expr.name, 'only instance have fields')
+
+        value = self.evaluate(expr.value)
+        obj.set(expr.name, value)
+        return value
 
     def visit_variable(self, expr: Variable) -> object:
         return self._lookup_variable(expr.name, expr)

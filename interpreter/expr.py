@@ -1,4 +1,4 @@
-# generate time: 2023-02-10 21:20:47
+# generate time: 2023-02-18 20:58:22
 from __future__ import annotations
 from abc import abstractmethod, ABCMeta
 from interpreter.token_ import Token
@@ -22,6 +22,14 @@ class ExprVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_call(self, expr: Call) -> object:
+        pass
+
+    @abstractmethod
+    def visit_get(self, expr: Get) -> object:
+        pass
+
+    @abstractmethod
+    def visit_set(self, expr: Set) -> object:
         pass
 
     @abstractmethod
@@ -83,6 +91,32 @@ class Call(Expr):
 
     def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_call(self)
+
+
+class Get(Expr):
+    object: Expr
+    name: Token
+
+    def __init__(self, object: Expr, name: Token, ):
+        self.object = object
+        self.name = name
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_get(self)
+
+
+class Set(Expr):
+    object: Expr
+    name: Token
+    value: Expr
+
+    def __init__(self, object: Expr, name: Token, value: Expr, ):
+        self.object = object
+        self.name = name
+        self.value = value
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_set(self)
 
 
 class Grouping(Expr):

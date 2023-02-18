@@ -3,9 +3,10 @@ import time
 from abc import ABCMeta, abstractmethod
 
 from interpreter.env import Env
-from interpreter.error import ReturnException
+from interpreter.error import ReturnException, RuntimeException
 from interpreter.interpreter_ import Interpreter
 from interpreter.stmt import Function
+from interpreter.token_ import Token
 
 
 class Callable(metaclass=ABCMeta):
@@ -40,9 +41,20 @@ class LoxClass(Callable):
 # lox类的实例
 class LoxInstance:
     klass: LoxClass
+    fields: dict[str, object]
 
     def __init__(self, klass):
         self.klass = klass
+        self.fields = {}
+
+    def get(self, name: Token) -> object:
+        if name.lexeme in self.fields.keys():
+            return self.fields[name.lexeme]
+        # todo 这种报错可以也考虑放到resolver中去, 不要等到运行时再报错?
+        raise RuntimeException(name, f"undefined property '{name.lexeme}'")
+
+    def set(self, name: Token, value: object) -> None:
+        self.fields[name.lexeme] = value
 
     def __repr__(self):
         return f'{self.klass.name} instance'

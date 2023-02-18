@@ -72,20 +72,42 @@ def test1() -> str:
 
 def test_class_decl() -> str:
     code = """
-    class A {
+    class Group {
         serveOn() {
             return "Scones";
         }
     }
-    print A; // Prints "A".
-    var a = A();
-    print a; // A instance
+    
+    print Group; // Prints "Group".
+    var g = Group();
+    print g; // Group instance
+    """
+    return code
+
+
+def test_get_set() -> str:
+    code = """
+    class Group {
+        serveOn() {
+            return "Scones";
+        }
+    }
+
+    print Group; // Prints "Group".
+
+    var g = Group();
+    g.name = "Nogizaka 46";
+    g.age = 10;
+
+    print g; // Group instance
+    print g.name;
+    print g.age;
     """
     return code
 
 
 if __name__ == '__main__':
-    scanner = Scanner(test_class_decl())
+    scanner = Scanner(test_get_set())
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)
@@ -96,4 +118,5 @@ if __name__ == '__main__':
     resolver = Resolver(interpreter)
     resolver.resolve(stmts)
     print(interpreter.local_map)
+    print('================')
     interpreter.interpret(stmts)

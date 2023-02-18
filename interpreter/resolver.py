@@ -1,6 +1,7 @@
 from enum import unique, Enum
 
-from interpreter.expr import ExprVisitor, Variable, Unary, Logical, Literal, Grouping, Call, Binary, Assign, Expr
+from interpreter.expr import ExprVisitor, Variable, Unary, Logical, Literal, Grouping, Call, Binary, Assign, Expr, Get, \
+    Set
 from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Var, Return, While, Print, If, Continue, Break, Function, Expression, Block, \
     Stmt, Class
@@ -101,6 +102,16 @@ class Resolver(ExprVisitor, StmtVisitor):
         self._resolve_expr(expr.callee)
         for arg in expr.arguments:
             self._resolve_expr(arg)
+        return None
+
+    def visit_get(self, expr: Get) -> object:
+        # 属性是动态查找的, 所以不管点右边的名称
+        self._resolve_expr(expr.object)
+        return None
+
+    def visit_set(self, expr: Set) -> object:
+        self._resolve_expr(expr.value)
+        self._resolve_expr(expr.object)
         return None
 
     def visit_grouping(self, expr: Grouping) -> object:

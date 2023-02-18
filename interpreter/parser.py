@@ -1,5 +1,5 @@
 from interpreter.error import ParseException
-from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call
+from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call, Get, Set
 from interpreter.lox import Lox
 from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function, Return, Class
 from interpreter.token_ import Token, TokenType
@@ -10,7 +10,7 @@ from interpreter.token_ import Token, TokenType
 
 expression     → assignment ;
 expression     → assignment ;
-assignment     → IDENTIFIER "=" assignment
+assignment     → ( call "." )? IDENTIFIER "=" assignment
                | logic_or ;
 logic_or       → logic_and ( "or" logic_and )* ;
 logic_and      → equality ( "and" equality )* ;
@@ -22,7 +22,7 @@ unary          → ( "!" | "-" ) unary
                | primary ;
 unary          → ( "!" | "-" ) unary | call ;
 
-call           → primary ( "(" arguments? ")" )* ;
+call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 
 primary        → "true" | "false" | "nil"
                | NUMBER | STRING
@@ -267,6 +267,10 @@ class Parser:
             if isinstance(expr, Variable):
                 # = 左边是一个左值, 表明表达式的结果要存在哪, 而不对自己进行求值
                 return Assign(expr.name, value)
+            if isinstance(expr, Get):
+                # a.b.c = d
+                # a.b.c都是get 然后被包装成了set
+                return Set(expr.object, expr.name, value)
             self._error(equal, 'Invalid assigment target')
         return expr
 
@@ -333,6 +337,9 @@ class Parser:
             # 可能有这种情况 f()()
             if self._match_any_type(TokenType.LEFT_PAREN):
                 expr = self._parse_finish_call(expr)
+            elif self._match_any_type(TokenType.DOT):
+                name = self._ensure(TokenType.IDENTIFIER, "expect property name after '.'")
+                expr = Get(expr, name)
             else:
                 break
 
