@@ -72,13 +72,14 @@ def test1() -> str:
 
 def test_class_decl() -> str:
     code = """
-    class DevonshireCream {
+    class A {
         serveOn() {
             return "Scones";
         }
     }
-    print DevonshireCream; // Prints "DevonshireCream".
-    
+    print A; // Prints "A".
+    var a = A();
+    print a; // A instance
     """
     return code
 

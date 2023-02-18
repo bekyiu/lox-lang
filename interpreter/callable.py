@@ -1,3 +1,4 @@
+from __future__ import annotations
 import time
 from abc import ABCMeta, abstractmethod
 
@@ -16,6 +17,35 @@ class Callable(metaclass=ABCMeta):
     @abstractmethod
     def arity(self) -> int:
         pass
+
+
+# lox类再python中的表示
+class LoxClass(Callable):
+    name: str
+
+    def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
+        instance = LoxInstance(self)
+        return instance
+
+    def arity(self) -> int:
+        return 0
+
+    def __init__(self, name):
+        self.name = name
+
+    def __repr__(self):
+        return self.name
+
+
+# lox类的实例
+class LoxInstance:
+    klass: LoxClass
+
+    def __init__(self, klass):
+        self.klass = klass
+
+    def __repr__(self):
+        return f'{self.klass.name} instance'
 
 
 # lox函数在python中的表示, 它会绑定一个名字存在环境中

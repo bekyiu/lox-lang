@@ -2,7 +2,6 @@ from interpreter.env import Env
 from interpreter.error import RuntimeException, BreakException, ReturnException
 from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
-from interpreter.lox_class import LoxClass
 from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function, \
     Return, Class
 from interpreter.token_ import TokenType, Token
@@ -87,6 +86,8 @@ class Interpreter(ExprVisitor, StmtVisitor):
         return None
 
     def visit_class(self, stmt: Class) -> object:
+        from interpreter.callable import LoxClass
+
         self.env.define(stmt.name.lexeme, None)
         klass = LoxClass(stmt.name.lexeme)
         # 这个二阶段的变量绑定过程允许在类的方法中引用其自身
