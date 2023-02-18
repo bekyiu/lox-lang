@@ -2,8 +2,9 @@ from interpreter.env import Env
 from interpreter.error import RuntimeException, BreakException, ReturnException
 from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
+from interpreter.lox_class import LoxClass
 from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function, \
-    Return
+    Return, Class
 from interpreter.token_ import TokenType, Token
 
 
@@ -83,6 +84,13 @@ class Interpreter(ExprVisitor, StmtVisitor):
         if stmt.initializer is not None:
             val = self.evaluate(stmt.initializer)
         self.env.define(stmt.name.lexeme, val)
+        return None
+
+    def visit_class(self, stmt: Class) -> object:
+        self.env.define(stmt.name.lexeme, None)
+        klass = LoxClass(stmt.name.lexeme)
+        # 这个二阶段的变量绑定过程允许在类的方法中引用其自身
+        self.env.assign(stmt.name, klass)
         return None
 
     def visit_function(self, stmt: Function) -> object:

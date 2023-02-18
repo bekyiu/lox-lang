@@ -3,7 +3,7 @@ from enum import unique, Enum
 from interpreter.expr import ExprVisitor, Variable, Unary, Logical, Literal, Grouping, Call, Binary, Assign, Expr
 from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Var, Return, While, Print, If, Continue, Break, Function, Expression, Block, \
-    Stmt
+    Stmt, Class
 from interpreter.token_ import Token
 from interpreter.interpreter_ import Interpreter
 
@@ -126,6 +126,11 @@ class Resolver(ExprVisitor, StmtVisitor):
                 Lox.error(token=expr.name, message='Can not read local variable in its own initializer')
 
         self._resolve_local(expr, expr.name)
+        return None
+
+    def visit_class(self, stmt: Class) -> object:
+        self._declare(stmt.name)
+        self._declare(stmt.name)
         return None
 
     def visit_block(self, stmt: Block) -> object:

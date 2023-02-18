@@ -1,7 +1,7 @@
 from interpreter.error import ParseException
 from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call
 from interpreter.lox import Lox
-from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function, Return
+from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function, Return, Class
 from interpreter.token_ import Token, TokenType
 
 """
@@ -35,9 +35,12 @@ arguments      → expression ( "," expression )* ;
 """
 program        → declaration* EOF ;
 
-declaration    → funDecl
+declaration    → classDecl
+               | funDecl
                | varDecl
                | statement ;
+
+classDecl      → "class" IDENTIFIER "{" function* "}" ;
 
 
 statement      → exprStmt
@@ -93,6 +96,8 @@ class Parser:
 
     def _parse_declaration(self) -> Stmt:
         try:
+            if self._match_any_type(TokenType.CLASS):
+                return self._parse_class_declaration()
             if self._match_any_type(TokenType.FUN):
                 return self._parse_function("function")
             if self._match_any_type(TokenType.VAR):
@@ -101,6 +106,18 @@ class Parser:
         except ParseException as e:
             self._synchronize()
             return None
+
+    def _parse_class_declaration(self) -> Stmt:
+        name = self._ensure(TokenType.IDENTIFIER, 'expect class name')
+        self._ensure(TokenType.LEFT_BRACE, "expect '{' before class body")
+
+        methods = []
+        while not self._is_match(TokenType.RIGHT_BRACE) and not self._is_at_end():
+            m = self._parse_function("method")
+            methods.append(m)
+
+        self._ensure(TokenType.RIGHT_BRACE, "expect '}' after class body")
+        return Class(name, methods)
 
     def _parse_function(self, kind: str) -> Stmt:
         name = self._ensure(TokenType.IDENTIFIER, f'expect {kind} name')
