@@ -173,3 +173,7 @@ class Variable(Expr):
 
     def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_variable(self)
+
+    def __repr__(self):
+        s = super().__repr__()
+        return f'{s} [{self.name.lexeme}]'

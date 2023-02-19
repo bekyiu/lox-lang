@@ -335,6 +335,8 @@ class Parser:
         expr = self._parse_primary()
         while True:
             # 可能有这种情况 f()()
+            # a.b
+            # a.b(c)
             if self._match_any_type(TokenType.LEFT_PAREN):
                 expr = self._parse_finish_call(expr)
             elif self._match_any_type(TokenType.DOT):

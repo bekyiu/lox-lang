@@ -23,6 +23,7 @@ class Callable(metaclass=ABCMeta):
 # lox类再python中的表示
 class LoxClass(Callable):
     name: str
+    methods: dict[str, LoxFunction]
 
     def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
         instance = LoxInstance(self)
@@ -31,8 +32,14 @@ class LoxClass(Callable):
     def arity(self) -> int:
         return 0
 
-    def __init__(self, name):
+    def find_method(self, name: str) -> LoxFunction:
+        if name in self.methods.keys():
+            return self.methods[name]
+        return None
+
+    def __init__(self, name, methods):
         self.name = name
+        self.methods = methods
 
     def __repr__(self):
         return self.name
@@ -50,6 +57,11 @@ class LoxInstance:
     def get(self, name: Token) -> object:
         if name.lexeme in self.fields.keys():
             return self.fields[name.lexeme]
+
+        method = self.klass.find_method(name.lexeme)
+        if method is not None:
+            return method
+
         # todo 这种报错可以也考虑放到resolver中去, 不要等到运行时再报错?
         raise RuntimeException(name, f"undefined property '{name.lexeme}'")
 

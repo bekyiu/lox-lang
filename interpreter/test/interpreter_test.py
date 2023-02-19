@@ -106,8 +106,25 @@ def test_get_set() -> str:
     return code
 
 
+def test_method() -> str:
+    code = """
+    class Group {
+        add(a, b) {
+            print "exec add";
+            return a + b;   
+        }
+    }
+
+
+    var g = Group();
+    var ret = g.add(3.3, 2);
+    print ret;
+    """
+    return code
+
+
 if __name__ == '__main__':
-    scanner = Scanner(test_get_set())
+    scanner = Scanner(test_method())
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)

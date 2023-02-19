@@ -87,10 +87,15 @@ class Interpreter(ExprVisitor, StmtVisitor):
         return None
 
     def visit_class(self, stmt: Class) -> object:
-        from interpreter.callable import LoxClass
+        from interpreter.callable import LoxClass, LoxFunction
 
         self.env.define(stmt.name.lexeme, None)
-        klass = LoxClass(stmt.name.lexeme)
+        methods = {}
+        for m in stmt.methods:
+            func = LoxFunction(m, self.env)
+            methods[m.name.lexeme] = func
+
+        klass = LoxClass(stmt.name.lexeme, methods)
         # 这个二阶段的变量绑定过程允许在类的方法中引用其自身
         self.env.assign(stmt.name, klass)
         return None

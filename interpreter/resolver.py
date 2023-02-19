@@ -13,6 +13,7 @@ from interpreter.interpreter_ import Interpreter
 class FunctionType(Enum):
     NONE = 0
     FUNCTION = 1
+    METHOD = 2
 
 
 # 静态分析 变量绑定
@@ -142,6 +143,10 @@ class Resolver(ExprVisitor, StmtVisitor):
     def visit_class(self, stmt: Class) -> object:
         self._declare(stmt.name)
         self._declare(stmt.name)
+
+        for m in stmt.methods:
+            self._resolve_function(m, FunctionType.METHOD)
+
         return None
 
     def visit_block(self, stmt: Block) -> object:
