@@ -14,6 +14,13 @@ class FunctionType(Enum):
     NONE = 0
     FUNCTION = 1
     METHOD = 2
+    INITIALIZER = 3
+
+
+@unique
+class ClassType(Enum):
+    NONE = 0
+    CLASS = 1
 
 
 # 静态分析 变量绑定
@@ -22,11 +29,13 @@ class Resolver(ExprVisitor, StmtVisitor):
     # 作用域map中与key相关联的值代表的是我们是否已经结束了对变量初始化式的解析
     scope_stack: list[dict[str, bool]]
     current_function: FunctionType
+    current_class: ClassType
 
     def __init__(self, interpreter):
         self.interpreter = interpreter
         self.scope_stack = []
         self.current_function = FunctionType.NONE
+        self.current_class = ClassType.NONE
 
     def resolve(self, statements: list[Stmt]) -> None:
         for stmt in statements:
@@ -128,6 +137,10 @@ class Resolver(ExprVisitor, StmtVisitor):
         return None
 
     def visit_this(self, expr: This) -> object:
+        if self.current_class == ClassType.NONE:
+            Lox.error(token=expr.keyword, message=f"can not use 'this' outside of class")
+            return None
+
         # 只要遇到this表达式（至少是在方法内部），它就会解析为一个“局部变量”
         # 该变量定义在方法体块之外的隐含作用域中。
         self._resolve_local(expr, expr.keyword)
@@ -147,6 +160,9 @@ class Resolver(ExprVisitor, StmtVisitor):
         return None
 
     def visit_class(self, stmt: Class) -> object:
+        pre_class = self.current_class
+        self.current_class = ClassType.CLASS
+
         self._declare(stmt.name)
         self._declare(stmt.name)
         self._begin_scope()
@@ -154,8 +170,11 @@ class Resolver(ExprVisitor, StmtVisitor):
         # 解释器是在执行get表达式的时候才来创建的env
         self.scope_stack[-1]['this'] = True
         for m in stmt.methods:
-            self._resolve_function(m, FunctionType.METHOD)
+            func_type = FunctionType.INITIALIZER if m.name.lexeme == 'init' else FunctionType.METHOD
+            self._resolve_function(m, func_type)
         self._end_scope()
+
+        self.current_class = pre_class
         return None
 
     def visit_block(self, stmt: Block) -> object:
@@ -202,6 +221,8 @@ class Resolver(ExprVisitor, StmtVisitor):
             Lox.error(token=stmt.keyword, message='can not return from top level code')
 
         if stmt.value is not None:
+            if self.current_function == FunctionType.INITIALIZER:
+                Lox.error(token=stmt.keyword, message='can not return a value from initializer')
             self._resolve_expr(stmt.value)
         return None
 

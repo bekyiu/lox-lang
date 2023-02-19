@@ -27,9 +27,17 @@ class LoxClass(Callable):
 
     def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
         instance = LoxInstance(self)
+        # 调用构造函数
+        initializer = self.find_method('init')
+        if initializer is not None:
+            initializer.bind(instance).call(interpreter, arguments)
+
         return instance
 
     def arity(self) -> int:
+        initializer = self.find_method('init')
+        if initializer is not None:
+            return initializer.arity()
         return 0
 
     def find_method(self, name: str) -> LoxFunction:
@@ -76,11 +84,14 @@ class LoxInstance:
 class LoxFunction(Callable):
     declaration: Function
     closure_env: Env
+    is_initializer: bool
 
-    def __init__(self, declaration, env):
+    def __init__(self, declaration, env, is_initializer):
         self.declaration = declaration
         # 在创建当前这个函数的同时 保存这个函数所在的环境
         self.closure_env = env
+        # 是否是构造方法
+        self.is_initializer = is_initializer
 
     def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
         # 每执行一个函数 都需要一个新的环境 来保存当前函数的局部变量
@@ -92,7 +103,15 @@ class LoxFunction(Callable):
         try:
             interpreter.execute_block(self.declaration.body, env)
         except ReturnException as e:
+            # 如果是构造方法 永远返回this
+            if self.is_initializer:
+                return self.closure_env.get_at(0, 'this')
+
             return e.value
+
+        # 手动调用构造方法 也返回this
+        if self.is_initializer:
+            return self.closure_env.get_at(0, 'this')
 
         return None
 
@@ -103,7 +122,7 @@ class LoxFunction(Callable):
     def bind(self, instance: LoxInstance) -> LoxFunction:
         env = Env(self.closure_env)
         env.define('this', instance)
-        return LoxFunction(self.declaration, env)
+        return LoxFunction(self.declaration, env, self.is_initializer)
 
     def __repr__(self):
         return f'<fn {self.declaration.name.lexeme}>'

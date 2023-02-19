@@ -138,11 +138,74 @@ def test_this() -> str:
     var ret = g.add(3.3, 2);
     print ret;
     """
+
+    code = """
+    class User {
+        new(name, age) {
+            this.name = name;
+            this.age = age;
+            return this;
+        }
+    
+        doWork() {
+            print clock();
+            print this.name + " is doing some work";
+        }
+    }
+    
+    var u = User().new("wyc", 10);
+    u.doWork();
+    """
+    return code
+
+
+def test_init():
+    code = """
+    class User {
+        init(name, age) {
+            this.name = name;
+            this.age = age;
+        }
+
+        doWork() {
+            print clock();
+            print this.name + " " + this.age + " is doing some work";
+        }
+    }
+
+    var u = User("haha", 10);
+    u.doWork();
+    """
+    return code
+
+
+def test_init_error():
+    code = """
+    class User {
+        init(name, age) {
+            this.name = name;
+            this.age = age;
+            // return 1;
+        }
+
+        doWork() {
+            print clock();
+            print this.name + " " + this.age + " is doing some work";
+        }
+    }
+
+    var u = User("hahaxx", 10);
+    var u2 = u.init("zz", 22);
+    print u2;
+    u.doWork();
+    u2.doWork();
+    print u == u2;
+    """
     return code
 
 
 if __name__ == '__main__':
-    scanner = Scanner(test_this())
+    scanner = Scanner(test_init_error())
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)
