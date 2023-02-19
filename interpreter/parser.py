@@ -1,5 +1,5 @@
 from interpreter.error import ParseException
-from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call, Get, Set
+from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call, Get, Set, This
 from interpreter.lox import Lox
 from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function, Return, Class
 from interpreter.token_ import Token, TokenType
@@ -359,6 +359,8 @@ class Parser:
         return Call(callee, paren, args)
 
     def _parse_primary(self) -> Expr:
+        if self._match_any_type(TokenType.THIS):
+            return This(self._peek_pre())
         if self._match_any_type(TokenType.FALSE):
             return Literal(False)
         if self._match_any_type(TokenType.TRUE):

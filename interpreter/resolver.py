@@ -1,7 +1,7 @@
 from enum import unique, Enum
 
 from interpreter.expr import ExprVisitor, Variable, Unary, Logical, Literal, Grouping, Call, Binary, Assign, Expr, Get, \
-    Set
+    Set, This
 from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Var, Return, While, Print, If, Continue, Break, Function, Expression, Block, \
     Stmt, Class
@@ -127,6 +127,12 @@ class Resolver(ExprVisitor, StmtVisitor):
         self._resolve_expr(expr.right)
         return None
 
+    def visit_this(self, expr: This) -> object:
+        # 只要遇到this表达式（至少是在方法内部），它就会解析为一个“局部变量”
+        # 该变量定义在方法体块之外的隐含作用域中。
+        self._resolve_local(expr, expr.keyword)
+        return None
+
     def visit_unary(self, expr: Unary) -> object:
         self._resolve_expr(expr.right)
         return None
@@ -143,10 +149,13 @@ class Resolver(ExprVisitor, StmtVisitor):
     def visit_class(self, stmt: Class) -> object:
         self._declare(stmt.name)
         self._declare(stmt.name)
-
+        self._begin_scope()
+        # 声明this
+        # 解释器是在执行get表达式的时候才来创建的env
+        self.scope_stack[-1]['this'] = True
         for m in stmt.methods:
             self._resolve_function(m, FunctionType.METHOD)
-
+        self._end_scope()
         return None
 
     def visit_block(self, stmt: Block) -> object:

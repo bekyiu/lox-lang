@@ -79,11 +79,13 @@ if __name__ == '__main__':
         "Grouping : Expr expression",
         "Literal  : object value",
         "Logical  : Expr left, Token operator, Expr right",
+        "This     : Token keyword",
         "Unary    : Token operator, Expr right",
         "Variable : Token name",
     ])
 
     path = '../expr.py'
+    # print(ast)
     with open(path, 'w') as f:
         f.write(ast)
 

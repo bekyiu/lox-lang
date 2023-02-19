@@ -60,7 +60,7 @@ class LoxInstance:
 
         method = self.klass.find_method(name.lexeme)
         if method is not None:
-            return method
+            return method.bind(self)
 
         # todo 这种报错可以也考虑放到resolver中去, 不要等到运行时再报错?
         raise RuntimeException(name, f"undefined property '{name.lexeme}'")
@@ -98,6 +98,12 @@ class LoxFunction(Callable):
 
     def arity(self) -> int:
         return len(self.declaration.params)
+
+    # 用来给当前方法绑定this
+    def bind(self, instance: LoxInstance) -> LoxFunction:
+        env = Env(self.closure_env)
+        env.define('this', instance)
+        return LoxFunction(self.declaration, env)
 
     def __repr__(self):
         return f'<fn {self.declaration.name.lexeme}>'

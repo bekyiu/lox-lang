@@ -1,4 +1,4 @@
-# generate time: 2023-02-18 20:58:22
+# generate time: 2023-02-19 15:00:48
 from __future__ import annotations
 from abc import abstractmethod, ABCMeta
 from interpreter.token_ import Token
@@ -42,6 +42,10 @@ class ExprVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_logical(self, expr: Logical) -> object:
+        pass
+
+    @abstractmethod
+    def visit_this(self, expr: This) -> object:
         pass
 
     @abstractmethod
@@ -153,6 +157,16 @@ class Logical(Expr):
         return visitor.visit_logical(self)
 
 
+class This(Expr):
+    keyword: Token
+
+    def __init__(self, keyword: Token, ):
+        self.keyword = keyword
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_this(self)
+
+
 class Unary(Expr):
     operator: Token
     right: Expr
@@ -173,7 +187,3 @@ class Variable(Expr):
 
     def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_variable(self)
-
-    def __repr__(self):
-        s = super().__repr__()
-        return f'{s} [{self.name.lexeme}]'

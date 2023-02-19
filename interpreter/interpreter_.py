@@ -1,7 +1,7 @@
 from interpreter.env import Env
 from interpreter.error import RuntimeException, BreakException, ReturnException
 from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, \
-    Set
+    Set, This
 from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function, \
     Return, Class
@@ -202,6 +202,9 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_literal(self, expr: Literal) -> object:
         return expr.value
+
+    def visit_this(self, expr: This) -> object:
+        return self._lookup_variable(expr.keyword, expr)
 
     def visit_unary(self, expr: Unary) -> object:
         right = self.evaluate(expr.right)

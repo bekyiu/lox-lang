@@ -110,7 +110,7 @@ def test_method() -> str:
     code = """
     class Group {
         add(a, b) {
-            print "exec add";
+            print "add exec";
             return a + b;   
         }
     }
@@ -123,8 +123,26 @@ def test_method() -> str:
     return code
 
 
+def test_this() -> str:
+    code = """
+    class Group {
+        add(a, b) {
+            print this.name;
+            return a + b;   
+        }
+    }
+
+
+    var g = Group();
+    g.name = "sb";
+    var ret = g.add(3.3, 2);
+    print ret;
+    """
+    return code
+
+
 if __name__ == '__main__':
-    scanner = Scanner(test_method())
+    scanner = Scanner(test_this())
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)
