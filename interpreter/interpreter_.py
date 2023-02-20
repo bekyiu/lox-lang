@@ -89,13 +89,19 @@ class Interpreter(ExprVisitor, StmtVisitor):
     def visit_class(self, stmt: Class) -> object:
         from interpreter.callable import LoxClass, LoxFunction
 
+        super_class = None
+        if stmt.super_class is not None:
+            super_class = self.evaluate(stmt.super_class)
+            if not isinstance(super_class, LoxClass):
+                raise RuntimeException(stmt.super_class.name, 'super class must be a class')
+
         self.env.define(stmt.name.lexeme, None)
         methods = {}
         for m in stmt.methods:
             func = LoxFunction(m, self.env, m.name.lexeme == 'init')
             methods[m.name.lexeme] = func
 
-        klass = LoxClass(stmt.name.lexeme, methods)
+        klass = LoxClass(stmt.name.lexeme, super_class, methods)
         # 这个二阶段的变量绑定过程允许在类的方法中引用其自身
         self.env.assign(stmt.name, klass)
         return None

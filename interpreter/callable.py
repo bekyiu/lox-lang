@@ -24,6 +24,7 @@ class Callable(metaclass=ABCMeta):
 class LoxClass(Callable):
     name: str
     methods: dict[str, LoxFunction]
+    super_class: LoxClass
 
     def call(self, interpreter: Interpreter, arguments: list[object]) -> object:
         instance = LoxInstance(self)
@@ -43,11 +44,16 @@ class LoxClass(Callable):
     def find_method(self, name: str) -> LoxFunction:
         if name in self.methods.keys():
             return self.methods[name]
+
+        if self.super_class is not None:
+            return self.super_class.find_method(name)
+
         return None
 
-    def __init__(self, name, methods):
+    def __init__(self, name, super_class, methods):
         self.name = name
         self.methods = methods
+        self.super_class = super_class
 
     def __repr__(self):
         return self.name

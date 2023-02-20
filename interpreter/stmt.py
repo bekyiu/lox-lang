@@ -1,8 +1,8 @@
-# generate time: 2023-02-18 11:31:46
+# generate time: 2023-02-20 20:36:25
 from __future__ import annotations
 from abc import abstractmethod, ABCMeta
 
-from interpreter.expr import Expr
+from interpreter.expr import Expr, Variable
 from interpreter.token_ import Token
 
 
@@ -71,10 +71,12 @@ class Block(Stmt):
 
 class Class(Stmt):
     name: Token
+    super_class: Variable
     methods: list[Function]
 
-    def __init__(self, name: Token, methods: list[Function], ):
+    def __init__(self, name: Token, super_class: Variable, methods: list[Function], ):
         self.name = name
+        self.super_class = super_class
         self.methods = methods
 
     def accept(self, visitor: StmtVisitor) -> object:

@@ -204,8 +204,23 @@ def test_init_error():
     return code
 
 
+def test_extend():
+    code = """
+    class Doughnut {
+        cook() {
+            print "Fry until golden brown.";
+        }
+    }
+
+    class BostonCream < Doughnut {}
+
+    BostonCream().cook();
+    """
+    return code
+
+
 if __name__ == '__main__':
-    scanner = Scanner(test_init_error())
+    scanner = Scanner(test_extend())
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)

@@ -165,6 +165,12 @@ class Resolver(ExprVisitor, StmtVisitor):
 
         self._declare(stmt.name)
         self._declare(stmt.name)
+        if stmt.super_class is not None:
+            if stmt.name.lexeme == stmt.super_class.name.lexeme:
+                Lox.error(token=stmt.super_class.name, message='a class can not inherit from itself')
+
+            self._resolve_expr(stmt.super_class)
+
         self._begin_scope()
         # 声明this
         # 解释器是在执行get表达式的时候才来创建的env

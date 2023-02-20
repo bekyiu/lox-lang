@@ -40,7 +40,8 @@ declaration    → classDecl
                | varDecl
                | statement ;
 
-classDecl      → "class" IDENTIFIER "{" function* "}" ;
+classDecl      → "class" IDENTIFIER ( "<" IDENTIFIER )?
+                 "{" function* "}" ;
 
 
 statement      → exprStmt
@@ -109,6 +110,12 @@ class Parser:
 
     def _parse_class_declaration(self) -> Stmt:
         name = self._ensure(TokenType.IDENTIFIER, 'expect class name')
+
+        super_class = None
+        if self._match_any_type(TokenType.LESS):
+            self._ensure(TokenType.IDENTIFIER, 'expect supper class name')
+            super_class = Variable(self._peek_pre())
+
         self._ensure(TokenType.LEFT_BRACE, "expect '{' before class body")
 
         methods = []
@@ -117,7 +124,7 @@ class Parser:
             methods.append(m)
 
         self._ensure(TokenType.RIGHT_BRACE, "expect '}' after class body")
-        return Class(name, methods)
+        return Class(name, super_class, methods)
 
     def _parse_function(self, kind: str) -> Stmt:
         name = self._ensure(TokenType.IDENTIFIER, f'expect {kind} name')

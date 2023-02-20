@@ -86,13 +86,13 @@ if __name__ == '__main__':
 
     path = '../expr.py'
     # print(ast)
-    with open(path, 'w') as f:
-        f.write(ast)
+    # with open(path, 'w') as f:
+    #     f.write(ast)
 
     ast = define_ast('Stmt', [
         # 子类名: 字段类型 字段名称, ...
         "Block      : list[Stmt] statements",
-        "Class      : Token name, list[Function] methods",
+        "Class      : Token name, Variable super_class, list[Function] methods",
         "Expression : Expr expression",
         "Function   : Token name, list[Token] params, list[Stmt] body",
         "Break      : Token break_",
@@ -106,7 +106,7 @@ if __name__ == '__main__':
 
     path = '../stmt.py'
 
-    # with open(path, 'w') as f:
-    #     f.write(ast)
+    with open(path, 'w') as f:
+        f.write(ast)
 
     print('ok!!')
