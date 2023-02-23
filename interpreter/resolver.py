@@ -21,6 +21,7 @@ class FunctionType(Enum):
 class ClassType(Enum):
     NONE = 0
     CLASS = 1
+    SUBCLASS = 2
 
 
 # 静态分析 变量绑定
@@ -137,6 +138,11 @@ class Resolver(ExprVisitor, StmtVisitor):
         return None
 
     def visit_super(self, expr: Super) -> object:
+        if self.current_class == ClassType.NONE:
+            Lox.error(token=expr.keyword, message="can not use 'super' outsize of a class")
+        elif self.current_class == ClassType.CLASS:
+            Lox.error(token=expr.keyword, message="can not use 'super' in a class with no super class")
+
         self._resolve_local(expr, expr.keyword)
         return None
 
@@ -173,6 +179,7 @@ class Resolver(ExprVisitor, StmtVisitor):
             if stmt.name.lexeme == stmt.super_class.name.lexeme:
                 Lox.error(token=stmt.super_class.name, message='a class can not inherit from itself')
 
+            self.current_class = ClassType.SUBCLASS
             self._resolve_expr(stmt.super_class)
             self._begin_scope()
             self.scope_stack[-1]['super'] = True

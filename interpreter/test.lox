@@ -1,5 +1,45 @@
+class Node {
+    init(value) {
+        this.value = value;
+        this.next = nil;
+    }
+}
 
-print (1 + 9) / 3;
+class List {
+    init() {
+        this.size = 0;
+        this.head = Node(nil);
+        // 头不算在size里
+        this.tail = this.head;
+    }
 
-print "hey! asuka";
+    append(value) {
+        var node = Node(value);
+        this.tail.next = node;
+        this.tail = node;
+        this.size = this.size + 1;
+    }
+
+    getAt(idx) {
+        var p = this.head.next;
+        for (var i = 0; i < idx; i = i + 1) {
+            p = p.next;
+        }
+        return p.value;
+    }
+}
+
+fun main() {
+    var list = List();
+    list.append(10);
+    list.append("haha");
+    list.append(false);
+
+    for (var i = 0; i < list.size; i = i + 1) {
+        var value = list.getAt(i);
+        print value;
+    }
+}
+
+main();
 

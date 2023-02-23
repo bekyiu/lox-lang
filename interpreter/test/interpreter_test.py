@@ -297,8 +297,24 @@ def test_super3():
     return code
 
 
+def test_super4():
+    code = """
+    super.say();
+    
+    class A {
+        say() {
+            super.zz();
+            print "A";
+        }
+    }
+
+    
+    """
+    return code
+
+
 if __name__ == '__main__':
-    scanner = Scanner(test_super3())
+    scanner = Scanner(test_super4())
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)
