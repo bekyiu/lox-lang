@@ -1,4 +1,4 @@
-# generate time: 2023-02-19 15:00:48
+# generate time: 2023-02-20 21:22:04
 from __future__ import annotations
 from abc import abstractmethod, ABCMeta
 from interpreter.token_ import Token
@@ -26,6 +26,10 @@ class ExprVisitor(metaclass=ABCMeta):
 
     @abstractmethod
     def visit_get(self, expr: Get) -> object:
+        pass
+
+    @abstractmethod
+    def visit_super(self, expr: Super) -> object:
         pass
 
     @abstractmethod
@@ -107,6 +111,18 @@ class Get(Expr):
 
     def accept(self, visitor: ExprVisitor) -> object:
         return visitor.visit_get(self)
+
+
+class Super(Expr):
+    keyword: Token
+    method: Token
+
+    def __init__(self, keyword: Token, method: Token, ):
+        self.keyword = keyword
+        self.method = method
+
+    def accept(self, visitor: ExprVisitor) -> object:
+        return visitor.visit_super(self)
 
 
 class Set(Expr):

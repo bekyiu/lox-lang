@@ -219,8 +219,86 @@ def test_extend():
     return code
 
 
+def test_super():
+    code = """
+    class A {
+        say() {
+            print "A";
+        }
+    }
+
+    class B < A {
+        say() {
+            super.say();
+            print "B";
+        }
+    }
+
+    B().say();
+    """
+    return code
+
+
+def test_super2():
+    code = """
+    class A {
+        init(name, age) {
+            this.name = name;
+            this.age = age;
+        
+        }
+        say() {
+            print this.name + ", " + this.age;
+        }
+    }
+
+    class B < A {
+        init(name, age) {
+            super.init(name, age);
+            this.sex = "boy";
+        }
+        say() {
+            super.say();
+            print this.name;
+            print this.sex;
+        }
+    }
+
+    B("www", 10).say();
+    """
+    return code
+
+
+def test_super3():
+    code = """
+    class A {
+        say() {
+            print "A";
+        }
+    }
+
+    class B < A {
+        say() {
+            super.say();
+            print "B";
+        }
+    }
+
+    class C < B {
+        say() {
+            super.say();
+            print "C";
+        }
+    }
+    
+    var c = C();
+    c.say();
+    """
+    return code
+
+
 if __name__ == '__main__':
-    scanner = Scanner(test_extend())
+    scanner = Scanner(test_super3())
     tokens = scanner.scan_tokens()
     print(tokens)
     parser = Parser(tokens)

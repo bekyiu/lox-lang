@@ -1,7 +1,7 @@
 from interpreter.env import Env
 from interpreter.error import RuntimeException, BreakException, ReturnException
 from interpreter.expr import ExprVisitor, Expr, Binary, Grouping, Literal, Unary, Variable, Assign, Logical, Call, Get, \
-    Set, This
+    Set, This, Super
 from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Print, Expression, Stmt, Var, Block, If, While, Continue, Break, Function, \
     Return, Class
@@ -88,20 +88,28 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_class(self, stmt: Class) -> object:
         from interpreter.callable import LoxClass, LoxFunction
+        self.env.define(stmt.name.lexeme, None)
 
         super_class = None
         if stmt.super_class is not None:
             super_class = self.evaluate(stmt.super_class)
             if not isinstance(super_class, LoxClass):
                 raise RuntimeException(stmt.super_class.name, 'super class must be a class')
+            # 新建一个环境 绑定super关键字
+            self.env = Env(self.env)
+            self.env.define('super', super_class)
 
-        self.env.define(stmt.name.lexeme, None)
         methods = {}
         for m in stmt.methods:
+            # 如果当前类有父类的话, 当前m所在的环境就包含了super
             func = LoxFunction(m, self.env, m.name.lexeme == 'init')
             methods[m.name.lexeme] = func
 
         klass = LoxClass(stmt.name.lexeme, super_class, methods)
+
+        if stmt.super_class is not None:
+            self.env = self.env.parent
+
         # 这个二阶段的变量绑定过程允许在类的方法中引用其自身
         self.env.assign(stmt.name, klass)
         return None
@@ -209,6 +217,15 @@ class Interpreter(ExprVisitor, StmtVisitor):
     def visit_literal(self, expr: Literal) -> object:
         return expr.value
 
+    def visit_super(self, expr: Super) -> object:
+        distance = self.local_map[expr]
+        super_class = self.env.get_at(distance, 'super')
+        # super.say()
+        # 执行这样的调用时 也要给say方法绑一个this, 这个this就是当前super所在方法的this
+        obj = self.env.get_at(distance - 1, 'this')
+        method = super_class.find_method(expr.method.lexeme)
+        return method.bind(obj)
+
     def visit_this(self, expr: This) -> object:
         return self._lookup_variable(expr.keyword, expr)
 
@@ -226,6 +243,7 @@ class Interpreter(ExprVisitor, StmtVisitor):
 
     def visit_call(self, expr: Call) -> object:
         # expr.callee是一个variable 所以会拿到env中注册好的函数
+        # 也可能是一个Super 拿到env绑好this和super的函数
         callee = self.evaluate(expr.callee)
         args = []
         for a in expr.arguments:

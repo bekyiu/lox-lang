@@ -1,5 +1,6 @@
 from interpreter.error import ParseException
-from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call, Get, Set, This
+from interpreter.expr import Expr, Binary, Unary, Literal, Grouping, Variable, Assign, Logical, Call, Get, Set, This, \
+    Super
 from interpreter.lox import Lox
 from interpreter.stmt import Stmt, Print, Expression, Var, Block, If, While, Break, Continue, Function, Return, Class
 from interpreter.token_ import Token, TokenType
@@ -24,10 +25,9 @@ unary          → ( "!" | "-" ) unary | call ;
 
 call           → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 
-primary        → "true" | "false" | "nil"
-               | NUMBER | STRING
-               | "(" expression ")"
-               | IDENTIFIER ;
+primary        → "true" | "false" | "nil" | "this"
+               | NUMBER | STRING | IDENTIFIER | "(" expression ")"
+               | "super" "." IDENTIFIER ;
 
 arguments      → expression ( "," expression )* ;
 """
@@ -382,6 +382,11 @@ class Parser:
             return Grouping(expr)
         if self._match_any_type(TokenType.IDENTIFIER):
             return Variable(self._peek_pre())
+        if self._match_any_type(TokenType.SUPER):
+            keyword = self._peek_pre()
+            self._ensure(TokenType.DOT, "expect '.' after super")
+            method = self._ensure(TokenType.IDENTIFIER, 'expect super class method name')
+            return Super(keyword, method)
         raise self._error(self._peek(), 'expect expression.')
 
     def _ensure(self, type: TokenType, error_msg: str) -> Token:

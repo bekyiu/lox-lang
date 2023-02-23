@@ -1,7 +1,7 @@
 from enum import unique, Enum
 
 from interpreter.expr import ExprVisitor, Variable, Unary, Logical, Literal, Grouping, Call, Binary, Assign, Expr, Get, \
-    Set, This
+    Set, This, Super
 from interpreter.lox import Lox
 from interpreter.stmt import StmtVisitor, Var, Return, While, Print, If, Continue, Break, Function, Expression, Block, \
     Stmt, Class
@@ -136,6 +136,10 @@ class Resolver(ExprVisitor, StmtVisitor):
         self._resolve_expr(expr.right)
         return None
 
+    def visit_super(self, expr: Super) -> object:
+        self._resolve_local(expr, expr.keyword)
+        return None
+
     def visit_this(self, expr: This) -> object:
         if self.current_class == ClassType.NONE:
             Lox.error(token=expr.keyword, message=f"can not use 'this' outside of class")
@@ -170,6 +174,8 @@ class Resolver(ExprVisitor, StmtVisitor):
                 Lox.error(token=stmt.super_class.name, message='a class can not inherit from itself')
 
             self._resolve_expr(stmt.super_class)
+            self._begin_scope()
+            self.scope_stack[-1]['super'] = True
 
         self._begin_scope()
         # 声明this
@@ -179,6 +185,9 @@ class Resolver(ExprVisitor, StmtVisitor):
             func_type = FunctionType.INITIALIZER if m.name.lexeme == 'init' else FunctionType.METHOD
             self._resolve_function(m, func_type)
         self._end_scope()
+
+        if stmt.super_class is not None:
+            self._end_scope()
 
         self.current_class = pre_class
         return None
