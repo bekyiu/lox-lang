@@ -31,3 +31,4 @@ HELP.md
 /venv
 
 
+/clox/cmake-build-debug/
