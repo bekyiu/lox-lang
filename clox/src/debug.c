@@ -1,6 +1,4 @@
-#include <stdio.h>
-
-#include "../header/debug.h"
+#include "debug.h"
 
 void disassembleChunk(Chunk *chunk, const char *name) {
     log("== %s ==\n", name);

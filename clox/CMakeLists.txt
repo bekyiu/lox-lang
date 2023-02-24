@@ -3,4 +3,13 @@ project(clox C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(clox main.c header/common.h header/chunk.h src/chunk.c header/memory.h src/memory.c header/debug.h src/debug.c header/value.h src/value.c)
+# 设定头文件路径
+include_directories(./header)
+
+# 查找指定目录下的所有源文件
+aux_source_directory(./src DIR_SRC)
+
+add_executable(clox main.c ${DIR_SRC})
+
+
+
