@@ -10,6 +10,7 @@ int main() {
     int constant = addConstant(&chunk, 99.2);
     writeChunk(&chunk, OP_CONSTANT, 12333);
     writeChunk(&chunk, constant, 12333);
+    writeChunk(&chunk, OP_NEGATE, 12334);
     writeChunk(&chunk, OP_RETURN, 123334);
 
 //    disassembleChunk(&chunk, "test haha");
