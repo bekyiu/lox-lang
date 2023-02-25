@@ -34,6 +34,12 @@ static InterpretResult run() {
 // 先取到ip指向的值 作为返回值, 在把ip++
 #define READ_BYTE() (*(vm.ip++))
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define BINARY_OP(op) \
+do { \
+    Value b = pop(); \
+    Value a = pop(); \
+    push(a op b); \
+} while(0)
 
     while (true) {
 #ifdef DEBUG_TRACE_EXECUTION
@@ -53,6 +59,22 @@ static InterpretResult run() {
                 push(constant);
                 break;
             }
+            case OP_ADD: {
+                BINARY_OP(+);
+                break;
+            }
+            case OP_SUBTRACT: {
+                BINARY_OP(-);
+                break;
+            }
+            case OP_MULTIPLY: {
+                BINARY_OP(*);
+                break;
+            }
+            case OP_DIVIDE: {
+                BINARY_OP(/);
+                break;
+            }
             case OP_NEGATE: {
                 push(-pop());
                 break;
@@ -64,6 +86,7 @@ static InterpretResult run() {
         }
     }
 
+#undef BINARY_OP
 #undef READ_CONSTANT
 #undef READ_BYTE
 }
