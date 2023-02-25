@@ -12,7 +12,7 @@ int main() {
     writeChunk(&chunk, constant, 12333);
     writeChunk(&chunk, OP_RETURN, 123334);
 
-    disassembleChunk(&chunk, "test haha");
+//    disassembleChunk(&chunk, "test haha");
     interpret(&chunk);
     freeChunk(&chunk);
     freeVM();
