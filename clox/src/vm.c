@@ -5,6 +5,7 @@
 #include "common.h"
 #include "value.h"
 #include "debug.h"
+#include "compiler.h"
 
 VM vm;
 
@@ -91,8 +92,7 @@ do { \
 #undef READ_BYTE
 }
 
-InterpretResult interpret(Chunk *chunk) {
-    vm.chunk = chunk;
-    vm.ip = chunk->code;
-    return run();
+InterpretResult interpret(const char *source) {
+    compile(source);
+    return INTERPRET_OK;
 }
