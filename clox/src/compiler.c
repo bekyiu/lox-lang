@@ -6,6 +6,21 @@
 #include "scanner.h"
 #include "common.h"
 
+typedef enum {
+    PREC_NONE,
+    PREC_ASSIGNMENT,  // =
+    PREC_OR,          // or
+    PREC_AND,         // and
+    PREC_EQUALITY,    // == !=
+    PREC_COMPARISON,  // < > <= >=
+    PREC_TERM,        // + -
+    PREC_FACTOR,      // * /
+    PREC_UNARY,       // ! -
+    PREC_CALL,        // . ()
+    PREC_PRIMARY
+} Precedence;
+
+
 typedef struct {
     Token current;
     Token previous;
@@ -89,13 +104,70 @@ static void endCompiler() {
     emitReturn();
 }
 
+// 向常量池添加常量 并返回索引
+static uint8_t makeConstant(Value value) {
+    int idx = addConstant(currentChunk(), value);
+    if (idx > UINT8_MAX) {
+        error("Too many constants in one chunk.");
+        return 0;
+    }
+    return (uint8_t) idx;
+}
+
+static void emitConstant(Value value) {
+    emitBytes(OP_CONSTANT, makeConstant(value));
+}
+
+
+// 这个函数从当前的标识开始，解析给定优先级或更高优先级的任何表达式
+// 假设我们正在处理 -a.b + c 这样的代码
+// 如果我们调用parsePrecedence(PREC_ASSIGNMENT)，那么它就会解析整个表达式，因为+的优先级高于赋值。
+// 如果我们调用parsePrecedence(PREC_UNARY)，它就会编译-a.b并停止。它不会径直解析+，因为加法的优先级比一元取负运算符要低。
+static void parsePrecedence(Precedence precedence) {
+    // todo
+}
+
+static void number() {
+    // number已经被消耗
+    double value = strtod(parser.previous.start, NULL);
+    emitConstant(value);
+}
+
+static void expression() {
+    parsePrecedence(PREC_ASSIGNMENT);
+}
+
+static void grouping() {
+    // 就后端而言，分组表达式实际上没有任何意义。它的唯一功能是语法上的——它允许你在需要高优先级的地方插入一个低优先级的表达式。
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
+}
+
+static void unary() {
+    // 前缀已经被消耗
+    TokenType operatorType = parser.previous.type;
+
+    // Compile the operand.
+    parsePrecedence(PREC_UNARY);
+
+    // Emit the operator instruction.
+    switch (operatorType) {
+        case TOKEN_MINUS:
+            emitByte(OP_NEGATE);
+            break;
+        default:
+            return; // Unreachable.
+    }
+}
+
+
 bool compile(const char *source, Chunk *chunk) {
     compilingChunk = chunk;
     parser.hadError = false;
     parser.panicMode = false;
     initScanner(source);
     advance();
-//    expression();
+    expression();
     consume(TOKEN_EOF, "Expect end of expression.");
     endCompiler();
     return !parser.hadError;
