@@ -2,6 +2,7 @@
 // Created by bekyiu on 2023/2/26.
 //
 
+#include "debug.h"
 #include "compiler.h"
 #include "scanner.h"
 #include "common.h"
@@ -20,6 +21,13 @@ typedef enum {
     PREC_PRIMARY
 } Precedence;
 
+typedef void (*ParseFn)();
+
+typedef struct {
+    ParseFn prefix;
+    ParseFn infix;
+    Precedence precedence;
+} ParseRule;
 
 typedef struct {
     Token current;
@@ -31,6 +39,61 @@ typedef struct {
 Parser parser;
 
 Chunk *compilingChunk;
+
+static void grouping();
+
+static void unary();
+
+static void binary();
+
+static void number();
+
+ParseRule rules[] = {
+        [TOKEN_LEFT_PAREN]    = {grouping, NULL, PREC_NONE},
+        [TOKEN_RIGHT_PAREN]   = {NULL, NULL, PREC_NONE},
+        [TOKEN_LEFT_BRACE]    = {NULL, NULL, PREC_NONE},
+        [TOKEN_RIGHT_BRACE]   = {NULL, NULL, PREC_NONE},
+        [TOKEN_COMMA]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_DOT]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_MINUS]         = {unary, binary, PREC_TERM},
+        [TOKEN_PLUS]          = {NULL, binary, PREC_TERM},
+        [TOKEN_SEMICOLON]     = {NULL, NULL, PREC_NONE},
+        [TOKEN_SLASH]         = {NULL, binary, PREC_FACTOR},
+        [TOKEN_STAR]          = {NULL, binary, PREC_FACTOR},
+        [TOKEN_BANG]          = {NULL, NULL, PREC_NONE},
+        [TOKEN_BANG_EQUAL]    = {NULL, NULL, PREC_NONE},
+        [TOKEN_EQUAL]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_EQUAL_EQUAL]   = {NULL, NULL, PREC_NONE},
+        [TOKEN_GREATER]       = {NULL, NULL, PREC_NONE},
+        [TOKEN_GREATER_EQUAL] = {NULL, NULL, PREC_NONE},
+        [TOKEN_LESS]          = {NULL, NULL, PREC_NONE},
+        [TOKEN_LESS_EQUAL]    = {NULL, NULL, PREC_NONE},
+        [TOKEN_IDENTIFIER]    = {NULL, NULL, PREC_NONE},
+        [TOKEN_STRING]        = {NULL, NULL, PREC_NONE},
+        [TOKEN_NUMBER]        = {number, NULL, PREC_NONE},
+        [TOKEN_AND]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_CLASS]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_ELSE]          = {NULL, NULL, PREC_NONE},
+        [TOKEN_FALSE]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_FOR]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_FUN]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_IF]            = {NULL, NULL, PREC_NONE},
+        [TOKEN_NIL]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_OR]            = {NULL, NULL, PREC_NONE},
+        [TOKEN_PRINT]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_RETURN]        = {NULL, NULL, PREC_NONE},
+        [TOKEN_SUPER]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_THIS]          = {NULL, NULL, PREC_NONE},
+        [TOKEN_TRUE]          = {NULL, NULL, PREC_NONE},
+        [TOKEN_VAR]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_WHILE]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_ERROR]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_EOF]           = {NULL, NULL, PREC_NONE},
+};
+
+static ParseRule *getRule(TokenType type) {
+    return &rules[type];
+}
 
 static Chunk *currentChunk() {
     return compilingChunk;
@@ -102,6 +165,12 @@ static void emitReturn() {
 
 static void endCompiler() {
     emitReturn();
+
+#ifdef DEBUG_PRINT_CODE
+    if (!parser.hadError) {
+        disassembleChunk(currentChunk(), "code");
+    }
+#endif
 }
 
 // 向常量池添加常量 并返回索引
@@ -124,7 +193,30 @@ static void emitConstant(Value value) {
 // 如果我们调用parsePrecedence(PREC_ASSIGNMENT)，那么它就会解析整个表达式，因为+的优先级高于赋值。
 // 如果我们调用parsePrecedence(PREC_UNARY)，它就会编译-a.b并停止。它不会径直解析+，因为加法的优先级比一元取负运算符要低。
 static void parsePrecedence(Precedence precedence) {
-    // todo
+    // 消费左侧操作数
+    advance();
+    ParseFn prefixRule = getRule(parser.previous.type)->prefix;
+    if (prefixRule == NULL) {
+        error("Expect expression.");
+        return;
+    }
+    // 生成左侧操作数的字节码
+    prefixRule();
+
+    // eg: 1 + 2 * 3
+    // 当前 precedence 是 '+' + 1, getRule(parser.current.type)->precedence 是 '*'
+    // 因为 '+' + 1的优先级小于等于 '*', 所以 2 应当和 * 3结合, 所以需要进入循环 先生成乘法指令
+
+    // 如果是 1 + 2 + 3
+    // 那么 precedence 是 '+' + 1, getRule(parser.current.type)->precedence 是 '+'
+    // 所以 2 应该和 1 + 先结合, 不用进入循环 先生成加法指令
+    while (precedence <= getRule(parser.current.type)->precedence) {
+        // 消费操作符
+        advance();
+        ParseFn infixRule = getRule(parser.previous.type)->infix;
+        // 左侧操作数的字节码已经生成好了 现在生成右侧操作数的
+        infixRule();
+    }
 }
 
 static void number() {
@@ -160,6 +252,31 @@ static void unary() {
     }
 }
 
+static void binary() {
+    TokenType operatorType = parser.previous.type;
+    ParseRule *rule = getRule(operatorType);
+    // 此时左侧的操作数字节码已经生成好了
+    // 这里再生成右侧操作数的字节码
+    parsePrecedence((Precedence) (rule->precedence + 1));
+
+    // 生成符号字节码
+    switch (operatorType) {
+        case TOKEN_PLUS:
+            emitByte(OP_ADD);
+            break;
+        case TOKEN_MINUS:
+            emitByte(OP_SUBTRACT);
+            break;
+        case TOKEN_STAR:
+            emitByte(OP_MULTIPLY);
+            break;
+        case TOKEN_SLASH:
+            emitByte(OP_DIVIDE);
+            break;
+        default:
+            return; // Unreachable.
+    }
+}
 
 bool compile(const char *source, Chunk *chunk) {
     compilingChunk = chunk;
@@ -168,6 +285,7 @@ bool compile(const char *source, Chunk *chunk) {
     initScanner(source);
     advance();
     expression();
+    // consume(TOKEN_SEMICOLON, "SB");
     consume(TOKEN_EOF, "Expect end of expression.");
     endCompiler();
     return !parser.hadError;

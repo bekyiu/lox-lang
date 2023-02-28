@@ -7,6 +7,7 @@ void disassembleChunk(Chunk *chunk, const char *name) {
     for (int offset = 0; offset < chunk->count;) {
         offset = disassembleInstruction(chunk, offset);
     }
+    log("== %s end ==\n", name);
 }
 
 // opcode

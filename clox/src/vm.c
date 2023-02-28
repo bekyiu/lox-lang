@@ -82,6 +82,7 @@ do { \
             }
             case OP_RETURN: {
                 printValue(pop());
+                log("\n");
                 return INTERPRET_OK;
             }
         }

@@ -4,7 +4,7 @@
 #include "common.h"
 
 static void repl() {
-    char line[1024];
+    char line[1024] = {'\0'};
     while (true) {
         printf("> ");
 
