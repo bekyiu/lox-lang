@@ -12,6 +12,10 @@
 
 #define FREE_ARRAY(type, pointer, oldCount) \
     reallocate(pointer, sizeof(type) * (oldCount), 0)
+
+#define ALLOCATE(type, size) \
+    (type*)reallocate(NULL, 0, sizeof(type) * (size))
+
 /**
  * 分配内存, 释放内存, 以及改变现有分配的大小
  *

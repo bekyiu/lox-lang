@@ -36,4 +36,6 @@ static inline bool isObjType(Value value, ObjType type) {
 
 ObjString* copyString(const char* chars, int length);
 
+void printObject(Value value);
+
 #endif //CLOX_OBJECT_H
