@@ -6,6 +6,7 @@
 #include "value.h"
 #include "debug.h"
 #include "compiler.h"
+#include "../header/memory.h"
 #include <stdarg.h>
 
 VM vm;
@@ -44,6 +45,22 @@ static void runtimeError(const char *format, ...) {
 // nil和false是假的，其它的值都表现为true
 static bool isFalsey(Value value) {
     return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+// 字符串拼接
+static void concatenate() {
+    // todo 这里不free?
+    ObjString *b = AS_STRING(pop());
+    ObjString *a = AS_STRING(pop());
+
+    int len = a->length + b->length;
+    char *str = ALLOCATE(char, len + 1);
+    memcpy(str, a->chars, a->length);
+    memcpy(str + a->length, b->chars, b->length);
+    str[len] = '\0';
+
+    ObjString *ret = takeString(str, len);
+    push(OBJ_VAL(ret));
 }
 
 void initVM() {
@@ -114,7 +131,18 @@ do { \
                 break;
             }
             case OP_ADD: {
-                BINARY_OP(NUMBER_VAL, +);
+                Value b = peek(0);
+                Value a = peek(0);
+                if (IS_STRING(b) && IS_STRING(a)) {
+                    concatenate();
+                } else if (IS_NUMBER(b) && IS_NUMBER(a)) {
+                    double vb = AS_NUMBER(pop());
+                    double va = AS_NUMBER(pop());
+                    push(NUMBER_VAL(va + vb));
+                } else {
+                    runtimeError("Operands must be two numbers or two strings.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
                 break;
             }
             case OP_SUBTRACT: {
