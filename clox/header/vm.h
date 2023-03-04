@@ -18,6 +18,8 @@ typedef struct {
     Value stack[STACK_MAX];
     // 指向栈顶元素的下一个位置
     Value *stackTop;
+    // lox对象链表
+    Obj *objects;
 } VM;
 
 typedef enum {
@@ -25,6 +27,8 @@ typedef enum {
     INTERPRET_COMPILE_ERROR,
     INTERPRET_RUNTIME_ERROR,
 } InterpretResult;
+
+extern VM vm;
 
 void initVM();
 

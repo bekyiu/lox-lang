@@ -49,7 +49,7 @@ static bool isFalsey(Value value) {
 
 // 字符串拼接
 static void concatenate() {
-    // todo 这里不free?
+    // gc会free这些被pop的字符串
     ObjString *b = AS_STRING(pop());
     ObjString *a = AS_STRING(pop());
 
@@ -65,10 +65,11 @@ static void concatenate() {
 
 void initVM() {
     resetStack();
+    vm.objects = NULL;
 }
 
 void freeVM() {
-
+    freeObjects();
 }
 
 static InterpretResult run() {

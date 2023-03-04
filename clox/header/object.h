@@ -16,6 +16,8 @@ typedef enum {
 // 所有lox对象的父类
 struct Obj {
     ObjType type;
+    // 用于记录所有分配的lox对象 因为需要被释放
+    struct Obj *next;
 };
 
 struct ObjString {

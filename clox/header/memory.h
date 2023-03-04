@@ -16,6 +16,8 @@
 #define ALLOCATE(type, size) \
     (type*)reallocate(NULL, 0, sizeof(type) * (size))
 
+#define FREE(type, pointer) reallocate(pointer, sizeof(type), 0)
+
 /**
  * 分配内存, 释放内存, 以及改变现有分配的大小
  *
@@ -31,5 +33,8 @@
  * @return
  */
 void *reallocate(void *pointer, size_t oldSize, size_t newSize);
+
+// 释放所有的lox对象
+void freeObjects();
 
 #endif //CLOX_MEMORY_H
