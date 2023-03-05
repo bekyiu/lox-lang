@@ -52,6 +52,10 @@ static void literal();
 
 static void string();
 
+static void statement();
+
+static void declaration();
+
 ParseRule rules[] = {
         [TOKEN_LEFT_PAREN]    = {grouping, NULL, PREC_NONE},
         [TOKEN_RIGHT_PAREN]   = {NULL, NULL, PREC_NONE},
@@ -152,6 +156,19 @@ static void consume(TokenType type, const char *message) {
 
     errorAtCurrent(message);
 }
+
+static bool check(TokenType type) {
+    return parser.current.type == type;
+}
+
+static bool match(TokenType type) {
+    if (!check(type)) {
+        return false;
+    }
+    advance();
+    return true;
+}
+
 
 // ==== 生成字节码 ====
 static void emitByte(uint8_t byte) {
@@ -326,15 +343,34 @@ static void string() {
     emitConstant(value);
 }
 
+
+static void printStatement() {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after value.");
+    emitByte(OP_PRINT);
+}
+
+static void statement() {
+    if (match(TOKEN_PRINT)) {
+        printStatement();
+    }
+}
+
+static void declaration() {
+    statement();
+}
+
 bool compile(const char *source, Chunk *chunk) {
     compilingChunk = chunk;
     parser.hadError = false;
     parser.panicMode = false;
     initScanner(source);
     advance();
-    expression();
-    // consume(TOKEN_SEMICOLON, "SB");
-    consume(TOKEN_EOF, "Expect end of expression.");
+
+    while (!match(TOKEN_EOF)) {
+        declaration();
+    }
+
     endCompiler();
     return !parser.hadError;
 }
