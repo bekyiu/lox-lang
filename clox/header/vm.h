@@ -7,6 +7,7 @@
 
 #include "chunk.h"
 #include "value.h"
+#include "table.h"
 
 #define STACK_MAX 256
 
@@ -18,6 +19,9 @@ typedef struct {
     Value stack[STACK_MAX];
     // 指向栈顶元素的下一个位置
     Value *stackTop;
+    // 字符串驻留集合
+    // 用于存储所有运行时创建的字符串(去重)
+    Table strings;
     // lox对象链表
     Obj *objects;
 } VM;
