@@ -66,10 +66,12 @@ static void concatenate() {
 void initVM() {
     resetStack();
     vm.objects = NULL;
+    initTable(&vm.globals);
     initTable(&vm.strings);
 }
 
 void freeVM() {
+    freeTable(&vm.globals);
     freeTable(&vm.strings);
     freeObjects();
 }
@@ -78,6 +80,7 @@ static InterpretResult run() {
 // 先取到ip指向的值 作为返回值, 在把ip++
 #define READ_BYTE() (*(vm.ip++))
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define READ_STRING() AS_STRING(READ_CONSTANT())
 #define BINARY_OP(valueType, op) \
 do { \
     if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -120,6 +123,15 @@ do { \
                 break;
             }
             case OP_POP: {
+                pop();
+                break;
+            }
+            case OP_DEFINE_GLOBAL: {
+                ObjString *name = READ_STRING();
+                // 此时栈顶是表达式的结果
+                // 先存在map里, 再pop
+                // 因为存map的时候可能会触发gc
+                tableSet(&vm.globals, name, peek(0));
                 pop();
                 break;
             }
@@ -188,6 +200,7 @@ do { \
     }
 
 #undef BINARY_OP
+#undef READ_STRING
 #undef READ_CONSTANT
 #undef READ_BYTE
 }

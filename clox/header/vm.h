@@ -19,6 +19,8 @@ typedef struct {
     Value stack[STACK_MAX];
     // 指向栈顶元素的下一个位置
     Value *stackTop;
+    // 全局变量表
+    Table globals;
     // 字符串驻留集合
     // 用于存储所有运行时创建的字符串(去重)
     Table strings;
