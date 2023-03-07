@@ -56,6 +56,8 @@ static void statement();
 
 static void declaration();
 
+static void variable();
+
 ParseRule rules[] = {
         [TOKEN_LEFT_PAREN]    = {grouping, NULL, PREC_NONE},
         [TOKEN_RIGHT_PAREN]   = {NULL, NULL, PREC_NONE},
@@ -76,7 +78,7 @@ ParseRule rules[] = {
         [TOKEN_GREATER_EQUAL] = {NULL, binary, PREC_COMPARISON},
         [TOKEN_LESS]          = {NULL, binary, PREC_COMPARISON},
         [TOKEN_LESS_EQUAL]    = {NULL, binary, PREC_COMPARISON},
-        [TOKEN_IDENTIFIER]    = {NULL, NULL, PREC_NONE},
+        [TOKEN_IDENTIFIER]    = {variable, NULL, PREC_NONE},
         [TOKEN_STRING]        = {string, NULL, PREC_NONE},
         [TOKEN_NUMBER]        = {number, NULL, PREC_NONE},
         [TOKEN_AND]           = {NULL, NULL, PREC_NONE},
@@ -389,7 +391,9 @@ static void synchronize() {
     }
 }
 
+
 static uint8_t identifierConstant(Token *name) {
+    // 创建一个ObjString* 写入到常量池, 返回索引
     return makeConstant(OBJ_VAL(copyString(name->start, name->length)));
 }
 
@@ -415,6 +419,15 @@ static void varDeclaration() {
     defineVariable(global);
 }
 
+static void namedVariable(Token name) {
+    uint8_t arg = identifierConstant(&name);
+    emitBytes(OP_GET_GLOBAL, arg);
+}
+
+static void variable() {
+    namedVariable(parser.previous);
+}
+
 static void declaration() {
     if (match(TOKEN_VAR)) {
         varDeclaration();
@@ -425,6 +438,7 @@ static void declaration() {
         synchronize();
     }
 }
+
 
 bool compile(const char *source, Chunk *chunk) {
     compilingChunk = chunk;
