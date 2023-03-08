@@ -127,7 +127,7 @@ do { \
                 break;
             }
             case OP_GET_GLOBAL: {
-                ObjString* name = READ_STRING();
+                ObjString *name = READ_STRING();
                 Value value;
                 if (!tableGet(&vm.globals, name, &value)) {
                     runtimeError("Undefined variable '%s'.", name->chars);
@@ -143,6 +143,16 @@ do { \
                 // 因为存map的时候可能会触发gc
                 tableSet(&vm.globals, name, peek(0));
                 pop();
+                break;
+            }
+            case OP_SET_GLOBAL: {
+                ObjString *name = READ_STRING();
+                if (tableSet(&vm.globals, name, peek(0))) {
+                    // 如果 name不在全局变量表中 就不能对其进行赋值 (因为不能对一个不存在的变量进行赋值)
+                    tableDelete(&vm.globals, name);
+                    runtimeError("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
                 break;
             }
             case OP_EQUAL: {

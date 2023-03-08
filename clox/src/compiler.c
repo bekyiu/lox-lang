@@ -21,7 +21,7 @@ typedef enum {
     PREC_PRIMARY
 } Precedence;
 
-typedef void (*ParseFn)();
+typedef void (*ParseFn)(bool canAssign);
 
 typedef struct {
     ParseFn prefix;
@@ -40,23 +40,23 @@ Parser parser;
 
 Chunk *compilingChunk;
 
-static void grouping();
+static void grouping(bool canAssign);
 
-static void unary();
+static void unary(bool canAssign);
 
-static void binary();
+static void binary(bool canAssign);
 
-static void number();
+static void number(bool canAssign);
 
-static void literal();
+static void literal(bool canAssign);
 
-static void string();
+static void string(bool canAssign);
 
 static void statement();
 
 static void declaration();
 
-static void variable();
+static void variable(bool canAssign);
 
 ParseRule rules[] = {
         [TOKEN_LEFT_PAREN]    = {grouping, NULL, PREC_NONE},
@@ -223,8 +223,10 @@ static void parsePrecedence(Precedence precedence) {
         error("Expect expression.");
         return;
     }
+    // 考虑 a * b = 1 + 2, 这种情况是不能赋值的
+    bool canAssign = precedence <= PREC_ASSIGNMENT;
     // 生成左侧操作数的字节码
-    prefixRule();
+    prefixRule(canAssign);
 
     // eg: 1 + 2 * 3
     // 当前 precedence 是 '+' + 1, getRule(parser.current.type)->precedence 是 '*'
@@ -238,11 +240,15 @@ static void parsePrecedence(Precedence precedence) {
         advance();
         ParseFn infixRule = getRule(parser.previous.type)->infix;
         // 左侧操作数的字节码已经生成好了 现在生成右侧操作数的
-        infixRule();
+        infixRule(canAssign);
+    }
+
+    if (canAssign && match(TOKEN_EQUAL)) {
+        error("Invalid assignment target.");
     }
 }
 
-static void number() {
+static void number(bool canAssign) {
     // number已经被消耗
     double value = strtod(parser.previous.start, NULL);
     emitConstant(NUMBER_VAL(value));
@@ -252,13 +258,13 @@ static void expression() {
     parsePrecedence(PREC_ASSIGNMENT);
 }
 
-static void grouping() {
+static void grouping(bool canAssign) {
     // 就后端而言，分组表达式实际上没有任何意义。它的唯一功能是语法上的——它允许你在需要高优先级的地方插入一个低优先级的表达式。
     expression();
     consume(TOKEN_RIGHT_PAREN, "Expect ')' after expression.");
 }
 
-static void unary() {
+static void unary(bool canAssign) {
     // 前缀已经被消耗
     TokenType operatorType = parser.previous.type;
 
@@ -278,7 +284,7 @@ static void unary() {
     }
 }
 
-static void binary() {
+static void binary(bool canAssign) {
     TokenType operatorType = parser.previous.type;
     ParseRule *rule = getRule(operatorType);
     // 此时左侧的操作数字节码已经生成好了
@@ -322,7 +328,7 @@ static void binary() {
     }
 }
 
-static void literal() {
+static void literal(bool canAssign) {
     switch (parser.previous.type) {
         case TOKEN_FALSE:
             emitByte(OP_FALSE);
@@ -338,7 +344,7 @@ static void literal() {
     }
 }
 
-static void string() {
+static void string(bool canAssign) {
     // 略去两个双引号
     ObjString *str = copyString(parser.previous.start + 1, parser.previous.length - 2);
     Value value = OBJ_VAL(str);
@@ -419,13 +425,20 @@ static void varDeclaration() {
     defineVariable(global);
 }
 
-static void namedVariable(Token name) {
+static void namedVariable(Token name, bool canAssign) {
     uint8_t arg = identifierConstant(&name);
-    emitBytes(OP_GET_GLOBAL, arg);
+    // 赋值 setter
+    if (canAssign && match(TOKEN_EQUAL)) {
+        expression();
+        emitBytes(OP_SET_GLOBAL, arg);
+    } else {
+        // getter
+        emitBytes(OP_GET_GLOBAL, arg);
+    }
 }
 
-static void variable() {
-    namedVariable(parser.previous);
+static void variable(bool canAssign) {
+    namedVariable(parser.previous, canAssign);
 }
 
 static void declaration() {
