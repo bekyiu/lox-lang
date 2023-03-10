@@ -14,4 +14,6 @@
 // 每条指令执行前进行反编译, 并打印
 #define DEBUG_TRACE_EXECUTION
 
+#define UINT8_COUNT (UINT8_MAX + 1)
+
 #endif //CLOX_COMMON_H

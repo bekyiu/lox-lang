@@ -126,6 +126,18 @@ do { \
                 pop();
                 break;
             }
+            case OP_GET_LOCAL: {
+                // 局部变量在栈中的索引
+                uint8_t slot = READ_BYTE();
+                push(vm.stack[slot]);
+                break;
+            }
+            case OP_SET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                // 赋值是表达式 有返回值 所以不要pop
+                vm.stack[slot] = peek(0);
+                break;
+            }
             case OP_GET_GLOBAL: {
                 ObjString *name = READ_STRING();
                 Value value;
