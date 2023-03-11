@@ -411,9 +411,65 @@ static void endScope() {
     }
 }
 
+static int emitJump(uint8_t instruction) {
+    emitByte(instruction);
+    // 这两个0xff是站位的, 因为此时还不知道ip到底要便宜多远
+    emitByte(0xff);
+    emitByte(0xff);
+    // 返回占位符的索引
+    return currentChunk()->count - 2;
+}
+
+static void patchJump(int offset) {
+    // 当前ip - jump操作数处的ip - 操作数占用的2个字节
+    int jump = currentChunk()->count - offset - 2;
+
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
+
+    currentChunk()->code[offset] = (jump >> 8) & 0xff;
+    currentChunk()->code[offset + 1] = jump & 0xff;
+}
+
+static void ifStatement() {
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+    // 结果留在栈顶
+    expression();
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+    /*
+     * jump_if_false @else
+     *      pop
+     *      xxx
+     *      xxx
+     *      jump @end
+     * @else
+     *      pop
+     *      xxx
+     *      xxx
+     * @end
+     *
+     */
+    int thenJump = emitJump(OP_JUMP_IF_FALSE);
+    // 弹出栈顶的表达式值
+    emitByte(OP_POP);
+    statement();
+    int elseJump = emitJump(OP_JUMP);
+    // 回填jump的操作数
+    patchJump(thenJump);
+    emitByte(OP_POP);
+    if (match(TOKEN_ELSE)) {
+        statement();
+    }
+    patchJump(elseJump);
+}
+
 static void statement() {
     if (match(TOKEN_PRINT)) {
         printStatement();
+    } else if (match(TOKEN_IF)) {
+        ifStatement();
     } else if (match(TOKEN_LEFT_BRACE)) {
         beginScope();
         block();

@@ -1,0 +1,5 @@
+if (false) {
+    print "==== haha ====";
+} else {
+    print "==== I am in else ====";
+}
