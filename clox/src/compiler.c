@@ -70,15 +70,18 @@ static void literal(bool canAssign);
 
 static void string(bool canAssign);
 
-static void statement();
-
-static void declaration();
-
 static void variable(bool canAssign);
 
 static void and(bool canAssign);
 
 static void or(bool canAssign);
+
+
+static void statement();
+
+static void declaration();
+
+static void varDeclaration();
 
 ParseRule rules[] = {
         [TOKEN_LEFT_PAREN]    = {grouping, NULL, PREC_NONE},
@@ -532,9 +535,64 @@ static void whileStatement() {
     emitByte(OP_POP);
 }
 
+static void forStatement() {
+    beginScope();
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+    // 初始化子句
+    if (match(TOKEN_SEMICOLON)) {
+        // No initializer.
+    } else if (match(TOKEN_VAR)) {
+        varDeclaration();
+    } else {
+        expressionStatement();
+    }
+
+    int loopStart = currentChunk()->count;
+
+    // 条件子句
+    int exitJump = -1;
+    if (!match(TOKEN_SEMICOLON)) {
+        expression();
+        consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+        // Jump out of the loop if the condition is false.
+        exitJump = emitJump(OP_JUMP_IF_FALSE);
+        emitByte(OP_POP); // Condition.
+    }
+
+    // 增量子句
+    // 增量子句应该在 statement() 之后再执行
+    // 但因为是单边编译器, 所以字节码必须在这里生成
+    if (!match(TOKEN_RIGHT_PAREN)) {
+        // 跳到statement() 执行
+        int bodyJump = emitJump(OP_JUMP);
+        int incrementStart = currentChunk()->count;
+        expression();
+        emitByte(OP_POP);
+        consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+        // 跳到循环开头
+        emitLoop(loopStart);
+        loopStart = incrementStart;
+        patchJump(bodyJump);
+    }
+
+    statement();
+    // 如果有增量子句的话 这里是跳到增量子句 而不是循环开始
+    emitLoop(loopStart);
+
+    if (exitJump != -1) {
+        patchJump(exitJump);
+        emitByte(OP_POP); // Condition.
+    }
+
+    endScope();
+}
+
 static void statement() {
     if (match(TOKEN_PRINT)) {
         printStatement();
+    } else if (match(TOKEN_FOR)) {
+        forStatement();
     } else if (match(TOKEN_IF)) {
         ifStatement();
     } else if (match(TOKEN_WHILE)) {
