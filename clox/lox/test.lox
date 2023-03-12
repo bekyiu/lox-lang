@@ -1,5 +1,6 @@
-if (true or false) {
-    print "==== haha ====";
-} else {
-    print "==== I am in else ====";
+var a = 1;
+
+while (a <= 2) {
+    print a;
+    a = a + 1;
 }
