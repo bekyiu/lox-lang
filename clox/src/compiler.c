@@ -76,6 +76,10 @@ static void declaration();
 
 static void variable(bool canAssign);
 
+static void and(bool canAssign);
+
+static void or(bool canAssign);
+
 ParseRule rules[] = {
         [TOKEN_LEFT_PAREN]    = {grouping, NULL, PREC_NONE},
         [TOKEN_RIGHT_PAREN]   = {NULL, NULL, PREC_NONE},
@@ -99,7 +103,7 @@ ParseRule rules[] = {
         [TOKEN_IDENTIFIER]    = {variable, NULL, PREC_NONE},
         [TOKEN_STRING]        = {string, NULL, PREC_NONE},
         [TOKEN_NUMBER]        = {number, NULL, PREC_NONE},
-        [TOKEN_AND]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_AND]           = {NULL, and, PREC_AND},
         [TOKEN_CLASS]         = {NULL, NULL, PREC_NONE},
         [TOKEN_ELSE]          = {NULL, NULL, PREC_NONE},
         [TOKEN_FALSE]         = {literal, NULL, PREC_NONE},
@@ -107,7 +111,7 @@ ParseRule rules[] = {
         [TOKEN_FUN]           = {NULL, NULL, PREC_NONE},
         [TOKEN_IF]            = {NULL, NULL, PREC_NONE},
         [TOKEN_NIL]           = {literal, NULL, PREC_NONE},
-        [TOKEN_OR]            = {NULL, NULL, PREC_NONE},
+        [TOKEN_OR]            = {NULL, or, PREC_OR},
         [TOKEN_PRINT]         = {NULL, NULL, PREC_NONE},
         [TOKEN_RETURN]        = {NULL, NULL, PREC_NONE},
         [TOKEN_SUPER]         = {NULL, NULL, PREC_NONE},
@@ -430,6 +434,38 @@ static void patchJump(int offset) {
 
     currentChunk()->code[offset] = (jump >> 8) & 0xff;
     currentChunk()->code[offset + 1] = jump & 0xff;
+}
+
+static void and(bool canAssign) {
+    // 在这个方法被调用时，左侧的表达式已经被编译了。这意味着，在运行时，它的值将会在栈顶。
+    // 如果这个值为假，我们就知道整个and表达式的结果一定是假，所以我们跳过右边的操作数，将左边的值作为整个表达式的结果。
+    // 否则，我们就丢弃左值，计算右操作数，并将它作为整个and表达式的结果。
+    /*
+     * let op
+     * jump if false
+     * pop
+     * right op
+     * jump target
+     */
+    int endJump = emitJump(OP_JUMP_IF_FALSE);
+
+    emitByte(OP_POP);
+    parsePrecedence(PREC_AND);
+
+    patchJump(endJump);
+}
+
+static void or(bool canAssign) {
+    // 如果左侧操作数为真 就跳到结尾 返回左侧操作数
+    // 如果作则操作数为假 就跳过一条jump指令 计算右侧操作数
+    int elseJump = emitJump(OP_JUMP_IF_FALSE);
+    int endJump = emitJump(OP_JUMP);
+
+    patchJump(elseJump);
+    emitByte(OP_POP);
+
+    parsePrecedence(PREC_OR);
+    patchJump(endJump);
 }
 
 static void ifStatement() {
