@@ -43,6 +43,11 @@ typedef struct {
     int depth;
 } Local;
 
+typedef enum {
+    TYPE_FUNCTION,
+    TYPE_SCRIPT
+} FunctionType;
+
 typedef struct {
     // 一共256个局部变量可用
     Local locals[UINT8_COUNT];
@@ -50,11 +55,15 @@ typedef struct {
     int localCount;
     // 作用域深度 0就是全局变量
     int scopeDepth;
+    // 最外层的代码也当做一个函数
+    ObjFunction *function;
+    FunctionType type;
+    // 指向包含当前Compiler的Compiler
+    struct Compiler *enclosing;
 } Compiler;
 
 Parser parser;
 
-Chunk *compilingChunk;
 
 Compiler *current = NULL;
 
@@ -76,6 +85,8 @@ static void and(bool canAssign);
 
 static void or(bool canAssign);
 
+static void call(bool canAssign);
+
 
 static void statement();
 
@@ -84,7 +95,7 @@ static void declaration();
 static void varDeclaration();
 
 ParseRule rules[] = {
-        [TOKEN_LEFT_PAREN]    = {grouping, NULL, PREC_NONE},
+        [TOKEN_LEFT_PAREN]    = {grouping, call, PREC_CALL},
         [TOKEN_RIGHT_PAREN]   = {NULL, NULL, PREC_NONE},
         [TOKEN_LEFT_BRACE]    = {NULL, NULL, PREC_NONE},
         [TOKEN_RIGHT_BRACE]   = {NULL, NULL, PREC_NONE},
@@ -131,13 +142,29 @@ static ParseRule *getRule(TokenType type) {
 }
 
 static Chunk *currentChunk() {
-    return compilingChunk;
+    return &current->function->chunk;
 }
 
-static void initCompiler(Compiler *compiler) {
+static void initCompiler(Compiler *compiler, FunctionType type) {
+    // 指向上一层compiler
+    compiler->enclosing = (struct Compiler *) current;
+    compiler->type = type;
     compiler->localCount = 0;
     compiler->scopeDepth = 0;
+    compiler->function = newFunction();
     current = compiler;
+
+    if (type != TYPE_SCRIPT) {
+        current->function->name = copyString(parser.previous.start, parser.previous.length);
+    }
+
+    // 栈槽0供虚拟机自己内部使用
+    // 这里相当于加了一个在 0层深度的局部变量
+    // 在运行时 栈底会存script function
+    Local *local = &current->locals[current->localCount++];
+    local->depth = 0;
+    local->name.start = "";
+    local->name.length = 0;
 }
 
 static void errorAt(Token *token, const char *message) {
@@ -217,14 +244,18 @@ static void emitReturn() {
     emitByte(OP_RETURN);
 }
 
-static void endCompiler() {
+static ObjFunction *endCompiler() {
     emitReturn();
-
+    ObjFunction *function = current->function;
 #ifdef DEBUG_PRINT_CODE
     if (!parser.hadError) {
-        disassembleChunk(currentChunk(), "code");
+        disassembleChunk(currentChunk(), function->name != NULL ? function->name->chars : "<script>");
     }
 #endif
+
+    // Compiler永远都是局部变量 不用考虑释放的问题
+    current = (Compiler *) current->enclosing;
+    return function;
 }
 
 // 向常量池添加常量 并返回索引
@@ -691,6 +722,10 @@ static uint8_t parseVariable(const char *errorMessage) {
 }
 
 static void markInitialized() {
+    if (current->scopeDepth == 0) {
+        // 没有全局变量需要被初始化 直接退出
+        return;
+    }
     current->locals[current->localCount - 1].depth = current->scopeDepth;
 }
 
@@ -759,8 +794,65 @@ static void variable(bool canAssign) {
     namedVariable(parser.previous, canAssign);
 }
 
+static void function(FunctionType type) {
+    Compiler compiler;
+    initCompiler(&compiler, type);
+    // 这是增加的是当前啊compiler的scope
+    // 函数中永远都是局部变量 所以没有endScope()
+    beginScope(); // [no-end-scope]
+
+    consume(TOKEN_LEFT_PAREN, "Expect '(' after function name.");
+    if (!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            current->function->arity++;
+            if (current->function->arity > 255) {
+                errorAtCurrent("Can't have more than 255 parameters.");
+            }
+            uint8_t constant = parseVariable("Expect parameter name.");
+            defineVariable(constant);
+        } while (match(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after parameters.");
+    consume(TOKEN_LEFT_BRACE, "Expect '{' before function body.");
+    block();
+
+    ObjFunction *function = endCompiler();
+    emitBytes(OP_CONSTANT, makeConstant(OBJ_VAL(function)));
+}
+
+static void funDeclaration() {
+    uint8_t global = parseVariable("Expect function name.");
+    markInitialized();
+    // 函数对象留在栈顶
+    function(TYPE_FUNCTION);
+    defineVariable(global);
+}
+
+static uint8_t argumentList() {
+    uint8_t argCount = 0;
+    // 每个参数表达式都会生成代码，将其值留在栈中
+    if (!check(TOKEN_RIGHT_PAREN)) {
+        do {
+            expression();
+            if (argCount == 255) {
+                error("Can't have more than 255 arguments.");
+            }
+            argCount++;
+        } while (match(TOKEN_COMMA));
+    }
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after arguments.");
+    return argCount;
+}
+
+static void call(bool canAssign) {
+    uint8_t argCount = argumentList();
+    emitBytes(OP_CALL, argCount);
+}
+
 static void declaration() {
-    if (match(TOKEN_VAR)) {
+    if (match(TOKEN_FUN)) {
+        funDeclaration();
+    } else if (match(TOKEN_VAR)) {
         varDeclaration();
     } else {
         statement();
@@ -771,12 +863,11 @@ static void declaration() {
 }
 
 
-bool compile(const char *source, Chunk *chunk) {
-    compilingChunk = chunk;
+ObjFunction *compile(const char *source) {
     parser.hadError = false;
     parser.panicMode = false;
     Compiler compiler;
-    initCompiler(&compiler);
+    initCompiler(&compiler, TYPE_SCRIPT);
     initScanner(source);
     advance();
 
@@ -784,6 +875,7 @@ bool compile(const char *source, Chunk *chunk) {
         declaration();
     }
 
-    endCompiler();
-    return !parser.hadError;
+    ObjFunction *function = endCompiler();
+    log("======== compile done ========\n");
+    return parser.hadError ? NULL : function;
 }

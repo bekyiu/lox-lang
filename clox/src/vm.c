@@ -13,6 +13,7 @@ VM vm;
 
 static void resetStack() {
     vm.stackTop = vm.stack;
+    vm.frameCount = 0;
 }
 
 void push(Value value) {
@@ -36,10 +37,46 @@ static void runtimeError(const char *format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    size_t instruction = vm.ip - vm.chunk->code - 1;
-    int line = vm.chunk->lines[instruction];
+    CallFrame *frame = &vm.frames[vm.frameCount - 1];
+    size_t instruction = frame->ip - frame->function->chunk.code - 1;
+    int line = frame->function->chunk.lines[instruction];
+
     fprintf(stderr, "[line %d] in script\n", line);
     resetStack();
+}
+
+
+static bool call(ObjFunction *function, int argCount) {
+    if (argCount != function->arity) {
+        runtimeError("Expected %d arguments but got %d.",
+                     function->arity, argCount);
+        return false;
+    }
+
+    if (vm.frameCount == FRAMES_MAX) {
+        runtimeError("Stack overflow.");
+        return false;
+    }
+
+    CallFrame *frame = &vm.frames[vm.frameCount++];
+    frame->function = function;
+    frame->ip = function->chunk.code;
+    frame->slots = vm.stackTop - argCount - 1;
+    return true;
+}
+
+
+static bool callValue(Value callee, int argCount) {
+    if (IS_OBJ(callee)) {
+        switch (OBJ_TYPE(callee)) {
+            case OBJ_FUNCTION:
+                return call(AS_FUNCTION(callee), argCount);
+            default:
+                break; // Non-callable object type.
+        }
+    }
+    runtimeError("Can only call functions and classes.");
+    return false;
 }
 
 // nil和false是假的，其它的值都表现为true
@@ -77,12 +114,14 @@ void freeVM() {
 }
 
 static InterpretResult run() {
+    CallFrame *frame = &vm.frames[vm.frameCount - 1];
+
 // 先取到ip指向的值 作为返回值, 在把ip++
-#define READ_BYTE() (*(vm.ip++))
-#define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define READ_BYTE() (*(frame->ip++))
+#define READ_CONSTANT() (frame->function->chunk.constants.values[READ_BYTE()])
 #define READ_STRING() AS_STRING(READ_CONSTANT())
 #define READ_SHORT() \
-    (vm.ip += 2, (uint16_t)((vm.ip[-2] << 8) | vm.ip[-1]))
+    (frame->ip += 2, (uint16_t)((frame->ip[-2] << 8) | frame->ip[-1]))
 #define BINARY_OP(valueType, op) \
 do { \
     if(!IS_NUMBER(peek(0)) || !IS_NUMBER(peek(1))) { \
@@ -103,7 +142,7 @@ do { \
             printf(" ]");
         }
         printf("\n");
-        disassembleInstruction(vm.chunk, (int) (vm.ip - vm.chunk->code));
+        disassembleInstruction(&frame->function->chunk, (int) (frame->ip - frame->function->chunk.code));
 #endif
         uint8_t opcode;
         switch (opcode = READ_BYTE()) {
@@ -131,13 +170,13 @@ do { \
             case OP_GET_LOCAL: {
                 // 局部变量在栈中的索引
                 uint8_t slot = READ_BYTE();
-                push(vm.stack[slot]);
+                push(frame->slots[slot]);
                 break;
             }
             case OP_SET_LOCAL: {
                 uint8_t slot = READ_BYTE();
                 // 赋值是表达式 有返回值 所以不要pop
-                vm.stack[slot] = peek(0);
+                frame->slots[slot] = peek(0);
                 break;
             }
             case OP_GET_GLOBAL: {
@@ -229,20 +268,29 @@ do { \
             }
             case OP_JUMP: {
                 uint16_t offset = READ_SHORT();
-                vm.ip += offset;
+                frame->ip += offset;
                 break;
             }
             case OP_JUMP_IF_FALSE: {
                 uint16_t offset = READ_SHORT();
                 // 并未弹出 是由pop指令弹出的
                 if (isFalsey(peek(0))) {
-                    vm.ip += offset;
+                    frame->ip += offset;
                 }
                 break;
             }
             case OP_LOOP: {
                 uint16_t offset = READ_SHORT();
-                vm.ip -= offset;
+                frame->ip -= offset;
+                break;
+            }
+            case OP_CALL: {
+                int argCount = READ_BYTE();
+                if (!callValue(peek(argCount), argCount)) {
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                // 切到新的函数执行
+                frame = &vm.frames[vm.frameCount - 1];
                 break;
             }
             case OP_RETURN: {
@@ -259,18 +307,15 @@ do { \
 }
 
 InterpretResult interpret(const char *source) {
-    Chunk chunk;
-    initChunk(&chunk);
-
-    if (!compile(source, &chunk)) {
-        freeChunk(&chunk);
+    ObjFunction *function = compile(source);
+    if (function == NULL) {
         return INTERPRET_COMPILE_ERROR;
     }
 
-    vm.chunk = &chunk;
-    vm.ip = vm.chunk->code;
+    push(OBJ_VAL(function));
+    call(function, 0);
+
 
     InterpretResult ret = run();
-    freeChunk(&chunk);
     return ret;
 }

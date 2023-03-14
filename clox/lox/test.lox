@@ -1,3 +1,7 @@
-for (var i = 1; i <= 200; i = i + 1) {
-    print i;
+var str = "haha";
+fun add(a, b) {
+    print str;
+    print a + b;
 }
+
+add(1, 2);

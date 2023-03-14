@@ -8,13 +8,24 @@
 #include "chunk.h"
 #include "value.h"
 #include "table.h"
+#include "object.h"
 
-#define STACK_MAX 256
+#define FRAMES_MAX 64
+#define STACK_MAX (FRAMES_MAX * UINT8_COUNT)
 
 typedef struct {
-    Chunk *chunk;
-    // 指向下一条需要执行的指令(opcode)所在的位置
+    // 被调函数
+    ObjFunction *function;
+    // 调用者ip
     uint8_t *ip;
+    // 属于背调函数栈的开始
+    Value *slots;
+} CallFrame;
+
+typedef struct {
+    // 最多函数套64层
+    CallFrame frames[FRAMES_MAX];
+    int frameCount;
     // 虚拟机栈
     Value stack[STACK_MAX];
     // 指向栈顶元素的下一个位置
