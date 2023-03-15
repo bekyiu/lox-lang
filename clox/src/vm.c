@@ -37,11 +37,18 @@ static void runtimeError(const char *format, ...) {
     va_end(args);
     fputs("\n", stderr);
 
-    CallFrame *frame = &vm.frames[vm.frameCount - 1];
-    size_t instruction = frame->ip - frame->function->chunk.code - 1;
-    int line = frame->function->chunk.lines[instruction];
-
-    fprintf(stderr, "[line %d] in script\n", line);
+    // 打印堆栈异常
+    for (int i = vm.frameCount - 1; i >= 0; i--) {
+        CallFrame *frame = &vm.frames[i];
+        ObjFunction *function = frame->function;
+        size_t instruction = frame->ip - function->chunk.code - 1;
+        fprintf(stderr, "[line %d] in ", function->chunk.lines[instruction]);
+        if (function->name == NULL) {
+            fprintf(stderr, "script\n");
+        } else {
+            fprintf(stderr, "%s()\n", function->name->chars);
+        }
+    }
     resetStack();
 }
 
@@ -294,7 +301,21 @@ do { \
                 break;
             }
             case OP_RETURN: {
-                return INTERPRET_OK;
+                // 拿到返回值
+                Value result = pop();
+                vm.frameCount--;
+                // 顶层不能写return 但是又读到return指令 说明是endCompiler了 结束执行
+                if (vm.frameCount == 0) {
+                    pop();
+                    return INTERPRET_OK;
+                }
+                // 回退栈指针
+                vm.stackTop = frame->slots;
+                // 压入返回值
+                push(result);
+                // 切到上个函数
+                frame = &vm.frames[vm.frameCount - 1];
+                break;
             }
         }
     }

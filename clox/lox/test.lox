@@ -1,7 +1,8 @@
-var str = "haha";
-fun add(a, b) {
-    print str;
-    print a + b;
+fun test() {
+    if (false) {
+        return 1;
+    }
+    return;
 }
 
-add(1, 2);
+print test();
