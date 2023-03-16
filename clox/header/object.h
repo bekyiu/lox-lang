@@ -12,6 +12,7 @@
 // 在堆上分配内存的lox value类型
 typedef enum {
     OBJ_FUNCTION,
+    OBJ_NATIVE,
     OBJ_STRING,
 } ObjType;
 
@@ -36,17 +37,31 @@ struct ObjString {
     uint32_t hash;
 };
 
+// 本地函数接口
+// 入参是参数个数和指向栈中第一个参数的指针
+typedef Value (*NativeFn)(int argCount, Value *args);
+
+typedef struct {
+    Obj obj;
+    NativeFn function;
+} ObjNative;
+
 #define OBJ_TYPE(value)        (AS_OBJ(value)->type)
 #define IS_FUNCTION(value)     isObjType(value, OBJ_FUNCTION)
 #define IS_STRING(value)       isObjType(value, OBJ_STRING)
+#define IS_NATIVE(value)       isObjType(value, OBJ_NATIVE)
 
 #define AS_FUNCTION(value)     ((ObjFunction*)AS_OBJ(value))
 #define AS_STRING(value)       ((ObjString*)AS_OBJ(value))
 #define AS_CSTRING(value)      (((ObjString*)AS_OBJ(value))->chars)
+#define AS_NATIVE(value) \
+    (((ObjNative*)AS_OBJ(value))->function)
 
 static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;
 }
+
+ObjNative *newNative(NativeFn function);
 
 ObjFunction *newFunction();
 
