@@ -15,8 +15,8 @@
 
 typedef struct {
     // 被调函数
-    ObjFunction *function;
-    // 调用者ip
+    ObjClosure *closure;
+    // 被调函数运行的ip
     uint8_t *ip;
     // 属于背调函数栈的开始
     Value *slots;
