@@ -15,6 +15,7 @@ typedef enum {
     OBJ_FUNCTION,
     OBJ_NATIVE,
     OBJ_STRING,
+    OBJ_UPVALUE,
 } ObjType;
 
 // 所有lox对象的父类
@@ -27,13 +28,25 @@ struct Obj {
 typedef struct {
     Obj obj;
     int arity;
+    // 当前这个函数已经捕获了多少外围的局部变量
+    int upvalueCount;
     Chunk chunk;
     ObjString *name;
 } ObjFunction;
 
+// upvalue在运行时的表示
+typedef struct ObjUpvalue {
+    Obj obj;
+    // 被捕获的值
+    Value *location;
+} ObjUpvalue;
+
 typedef struct {
     Obj obj;
     ObjFunction *function;
+    // 指向动态分配的 ObjUpvalue*数组
+    ObjUpvalue **upvalues;
+    int upvalueCount;
 } ObjClosure;
 
 struct ObjString {
@@ -78,6 +91,8 @@ ObjClosure *newClosure(ObjFunction *function);
 ObjString *takeString(char *chars, int length);
 
 ObjString *copyString(const char *chars, int length);
+
+ObjUpvalue *newUpvalue(Value *slot);
 
 void printObject(Value value);
 

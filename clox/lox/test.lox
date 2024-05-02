@@ -1,5 +1,8 @@
-fun a(a, b) {
-    print a + b;
+fun outer() {
+  var x = "outside";
+  fun inner() {
+    print x;
+  }
+  inner();
 }
-
-a("1", "2");
+outer();

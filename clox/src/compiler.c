@@ -43,6 +43,14 @@ typedef struct {
     int depth;
 } Local;
 
+typedef struct {
+    // 捕获的是哪个局部变量槽
+    uint8_t index;
+    // true说明捕获的是外围函数的局部变量
+    // false说明捕获的是外围函数的上值
+    bool isLocal;
+} Upvalue;
+
 typedef enum {
     TYPE_FUNCTION,
     TYPE_SCRIPT
@@ -53,12 +61,14 @@ typedef struct {
     Local locals[UINT8_COUNT];
     // 有多少个数组槽在使用
     int localCount;
+    // 当前函数捕获的 外层局部变量或者upvalue
+    Upvalue upvalues[UINT8_COUNT];
     // 作用域深度 0就是全局变量
     int scopeDepth;
     // 最外层的代码也当做一个函数
     ObjFunction *function;
     FunctionType type;
-    // 指向包含当前Compiler的Compiler
+    // 指向外围函数
     struct Compiler *enclosing;
 } Compiler;
 
@@ -787,12 +797,64 @@ static int resolveLocal(Compiler *compiler, Token *name) {
     return -1;
 }
 
+/**
+ * 为当前函数添加一个upvalue
+ * upvalue数组的索引 与运行时ObjClosure中upvalue所在的索引相匹配 ??
+ * @param compiler
+ * @param index     被捕获的局部变量的栈槽索引
+ * @param isLocal
+ * @return 新创建的upvalue在upvalue数组中的索引
+ */
+static int addUpvalue(Compiler *compiler, uint8_t index, bool isLocal) {
+    int upvalueCount = compiler->function->upvalueCount;
+
+    // 一个闭包可能会多次引用外围函数中的同一个变量
+    // 这种情况不需要重复创建upvalue
+    for (int i = 0; i < upvalueCount; i++) {
+        Upvalue *upvalue = &compiler->upvalues[i];
+        if (upvalue->index == index && upvalue->isLocal == isLocal) {
+            return i;
+        }
+    }
+
+    if (upvalueCount == UINT8_COUNT) {
+        error("Too many closure variables in function.");
+        return 0;
+    }
+
+    compiler->upvalues[upvalueCount].isLocal = isLocal;
+    compiler->upvalues[upvalueCount].index = index;
+    return compiler->function->upvalueCount++;
+}
+
+// 查找在任何外围函数中声明的局部变量。如果找到了，就会返回该变量的“上值索引”
+static int resolveUpvalue(Compiler *compiler, Token *name) {
+    if (compiler->enclosing == NULL) return -1;
+
+    // 从上一层捕获 局部变量
+    int local = resolveLocal((Compiler *) compiler->enclosing, name);
+    if (local != -1) {
+        return addUpvalue(compiler, (uint8_t) local, true);
+    }
+
+    // 如果上一层没捕获到 就捕获上一层的upvalue
+    int upvalue = resolveUpvalue((Compiler *) compiler->enclosing, name);
+    if (upvalue != -1) {
+        return addUpvalue(compiler, (uint8_t) upvalue, false);
+    }
+
+    return -1;
+}
+
 static void namedVariable(Token name, bool canAssign) {
     uint8_t getOp, setOp;
     int arg = resolveLocal(current, &name);
     if (arg != -1) {
         getOp = OP_GET_LOCAL;
         setOp = OP_SET_LOCAL;
+    } else if ((arg = resolveUpvalue(current, &name)) != -1) {
+        getOp = OP_GET_UPVALUE;
+        setOp = OP_SET_UPVALUE;
     } else {
         arg = identifierConstant(&name);
         getOp = OP_GET_GLOBAL;
@@ -836,6 +898,11 @@ static void function(FunctionType type) {
 
     ObjFunction *function = endCompiler();
     emitBytes(OP_CLOSURE, makeConstant(OBJ_VAL(function)));
+
+    for (int i = 0; i < function->upvalueCount; i++) {
+        emitByte(compiler.upvalues[i].isLocal ? 1 : 0);
+        emitByte(compiler.upvalues[i].index);
+    }
 }
 
 static void funDeclaration() {
