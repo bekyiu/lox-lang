@@ -39,6 +39,10 @@ typedef struct {
     ObjUpvalue *openUpvalues;
     // lox对象链表
     Obj *objects;
+    // 灰色对象列表 存储 Obj*
+    int grayCount;
+    int grayCapacity;
+    Obj **grayStack;
 } VM;
 
 typedef enum {
@@ -54,5 +58,9 @@ void initVM();
 void freeVM();
 
 InterpretResult interpret(const char *source);
+
+void push(Value value);
+
+Value pop();
 
 #endif //CLOX_VM_H

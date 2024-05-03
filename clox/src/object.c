@@ -31,7 +31,12 @@ static ObjString *allocateString(char *str, int length, uint32_t hash) {
     ret->length = length;
     ret->chars = str;
     ret->hash = hash;
+    // 这个时候ret才创建 还未被标记
+    // 在tableSet中如果的hash表扩容, 就会回收掉这个字符串, 这显然是不对的, 因为我们后续还需要使用这个字符串
+    // 所以这里先把他压入栈中, 这样就是一个gc root了
+    push(OBJ_VAL(ret));
     tableSet(&vm.strings, ret, NIL_VAL);
+    pop();
     return ret;
 }
 

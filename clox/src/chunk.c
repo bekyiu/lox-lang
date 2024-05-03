@@ -1,5 +1,6 @@
 #include "chunk.h"
 #include "../header/memory.h"
+#include "vm.h"
 
 void initChunk(Chunk *chunk) {
     chunk->count = 0;
@@ -30,6 +31,9 @@ void freeChunk(Chunk *chunk) {
 }
 
 int addConstant(Chunk *chunk, Value value) {
+    // writeValueArray 可能会扩容数组 所以要把value先作为gc root
+    push(value);
     writeValueArray(&chunk->constants, value);
+    pop();
     return chunk->constants.count - 1;
 }
