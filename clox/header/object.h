@@ -39,6 +39,9 @@ typedef struct ObjUpvalue {
     Obj obj;
     // 被捕获的值
     Value *location;
+    // 保存栈中被销毁的局部变量
+    Value closed;
+    struct ObjUpvalue* next;
 } ObjUpvalue;
 
 typedef struct {

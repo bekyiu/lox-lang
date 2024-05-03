@@ -41,6 +41,8 @@ typedef struct {
     Token name;
     // 作用域深度
     int depth;
+    // 是否被任何闭包捕获
+    bool isCaptured;
 } Local;
 
 typedef struct {
@@ -173,6 +175,7 @@ static void initCompiler(Compiler *compiler, FunctionType type) {
     // 在运行时 栈底会存script function
     Local *local = &current->locals[current->localCount++];
     local->depth = 0;
+    local->isCaptured = false;
     local->name.start = "";
     local->name.length = 0;
 }
@@ -456,7 +459,13 @@ static void endScope() {
     // 销毁局部变量
     while (current->localCount > 0 &&
            current->locals[current->localCount - 1].depth > current->scopeDepth) {
-        emitByte(OP_POP);
+        // 被捕获了的局部变量 是需要被提升到堆中的 不能简单的pop
+        if (current->locals[current->localCount - 1].isCaptured) {
+            emitByte(OP_CLOSE_UPVALUE);
+        } else {
+            emitByte(OP_POP);
+        }
+
         current->localCount--;
     }
 }
@@ -715,6 +724,7 @@ static void addLocal(Token name) {
     // -1 表示已经声明了该变量 仅仅把变量名加到了作用域中
     // 但还没进行初始化 不能使用
     local->depth = -1;
+    local->isCaptured = false;
 }
 
 static void declareVariable() {
@@ -799,7 +809,7 @@ static int resolveLocal(Compiler *compiler, Token *name) {
 
 /**
  * 为当前函数添加一个upvalue
- * upvalue数组的索引 与运行时ObjClosure中upvalue所在的索引相匹配 ??
+ * upvalue数组的索引 与运行时ObjClosure中upvalue所在的索引相匹配
  * @param compiler
  * @param index     被捕获的局部变量的栈槽索引
  * @param isLocal
@@ -834,6 +844,8 @@ static int resolveUpvalue(Compiler *compiler, Token *name) {
     // 从上一层捕获 局部变量
     int local = resolveLocal((Compiler *) compiler->enclosing, name);
     if (local != -1) {
+        Compiler *enclosing = (Compiler *) compiler->enclosing;
+        enclosing->locals[local].isCaptured = true;
         return addUpvalue(compiler, (uint8_t) local, true);
     }
 

@@ -15,6 +15,7 @@ VM vm;
 static void resetStack() {
     vm.stackTop = vm.stack;
     vm.frameCount = 0;
+    vm.openUpvalues = NULL;
 }
 
 void push(Value value) {
@@ -103,8 +104,38 @@ static bool callValue(Value callee, int argCount) {
 }
 
 static ObjUpvalue *captureUpvalue(Value *local) {
+    ObjUpvalue *prevUpvalue = NULL;
+    ObjUpvalue *upvalue = vm.openUpvalues;
+    // 从栈顶往栈底找
+    while (upvalue != NULL && upvalue->location > local) {
+        prevUpvalue = upvalue;
+        upvalue = upvalue->next;
+    }
+    // 找到了已经被创建过的upvalue 就不在创建了
+    if (upvalue != NULL && upvalue->location == local) {
+        return upvalue;
+    }
+
     ObjUpvalue *createdUpvalue = newUpvalue(local);
+    createdUpvalue->next = upvalue;
+
+    // 挂在链表的最后
+    if (prevUpvalue == NULL) {
+        vm.openUpvalues = createdUpvalue;
+    } else {
+        prevUpvalue->next = createdUpvalue;
+    }
+
     return createdUpvalue;
+}
+
+static void closeUpvalues(Value *last) {
+    while (vm.openUpvalues != NULL && vm.openUpvalues->location >= last) {
+        ObjUpvalue *upvalue = vm.openUpvalues;
+        upvalue->closed = *upvalue->location;
+        upvalue->location = &upvalue->closed;
+        vm.openUpvalues = upvalue->next;
+    }
 }
 
 // nil和false是假的，其它的值都表现为true
@@ -356,9 +387,15 @@ do { \
                 }
                 break;
             }
+            case OP_CLOSE_UPVALUE: {
+                closeUpvalues(vm.stackTop - 1);
+                pop();
+                break;
+            }
             case OP_RETURN: {
                 // 拿到返回值
                 Value result = pop();
+                closeUpvalues(frame->slots);
                 vm.frameCount--;
                 // 顶层不能写return 但是又读到return指令 说明是endCompiler了 结束执行
                 if (vm.frameCount == 0) {

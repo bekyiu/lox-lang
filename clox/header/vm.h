@@ -35,6 +35,8 @@ typedef struct {
     // 字符串驻留集合
     // 用于存储所有运行时创建的字符串(去重)
     Table strings;
+    // 所有的upvalue
+    ObjUpvalue *openUpvalues;
     // lox对象链表
     Obj *objects;
 } VM;
