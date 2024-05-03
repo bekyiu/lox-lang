@@ -2,6 +2,8 @@
 #define CLOX_MEMORY_H
 
 #include "common.h"
+#include "object.h"
+
 
 #define GROW_CAPACITY(capacity) \
     ((capacity) < 8 ? 8 : (capacity) * 2)
@@ -33,6 +35,12 @@
  * @return
  */
 void *reallocate(void *pointer, size_t oldSize, size_t newSize);
+
+void markObject(Obj* object);
+
+void markValue(Value value);
+
+void collectGarbage();
 
 // 释放所有的lox对象
 void freeObjects();

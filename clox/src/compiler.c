@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "compiler.h"
 #include "scanner.h"
+#include "memory.h"
 #include "common.h"
 
 typedef enum {
@@ -975,4 +976,12 @@ ObjFunction *compile(const char *source) {
     ObjFunction *function = endCompiler();
     log("======== compile done ========\n");
     return parser.hadError ? NULL : function;
+}
+
+void markCompilerRoots() {
+    Compiler *compiler = current;
+    while (compiler != NULL) {
+        markObject((Obj *) compiler->function);
+        compiler = (Compiler *) compiler->enclosing;
+    }
 }

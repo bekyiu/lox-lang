@@ -1,8 +1,22 @@
 #include "../header/memory.h"
 #include "vm.h"
-#include "object.h"
+
+#ifdef DEBUG_LOG_GC
+
+#include <stdio.h>
+#include "debug.h"
+#include "compiler.h"
+
+#endif
 
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
+    // 在要申请内存的时候 触发一次gc
+    if (newSize > oldSize) {
+#ifdef DEBUG_STRESS_GC
+        collectGarbage();
+#endif
+    }
+
     if (newSize == 0) {
         free(pointer);
         return NULL;
@@ -15,7 +29,24 @@ void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
     return result;
 }
 
+void markObject(Obj *object) {
+    if (object == NULL) return;
+#ifdef DEBUG_LOG_GC
+    printf("%p mark ", (void *) object);
+    printValue(OBJ_VAL(object));
+    printf("\n");
+#endif
+    object->isMarked = true;
+}
+
+void markValue(Value value) {
+    if (IS_OBJ(value)) markObject(AS_OBJ(value));
+}
+
 static void freeObject(Obj *object) {
+#ifdef DEBUG_LOG_GC
+    printf("%p free type %d\n", (void *) object, object->type);
+#endif
     switch (object->type) {
         case OBJ_CLOSURE: {
             ObjClosure *closure = (ObjClosure *) object;
@@ -44,6 +75,38 @@ static void freeObject(Obj *object) {
             break;
         }
     }
+}
+
+// 标记gc roots, 就是vm可以直接访问的对象
+static void markRoots() {
+    // 堆栈上的局部变量进行标记
+    for (Value *slot = vm.stack; slot < vm.stackTop; slot++) {
+        markValue(*slot);
+    }
+    // 标记闭包
+    for (int i = 0; i < vm.frameCount; i++) {
+        markObject((Obj *) vm.frames[i].closure);
+    }
+    // 标记upvalue
+    for (ObjUpvalue *upvalue = vm.openUpvalues; upvalue != NULL; upvalue = upvalue->next) {
+        markObject((Obj *) upvalue);
+    }
+    // 标记全局变量
+    markTable(&vm.globals);
+    // 编译期也可能会触发gc
+    markCompilerRoots();
+}
+
+void collectGarbage() {
+#ifdef DEBUG_LOG_GC
+    printf("-- gc begin\n");
+#endif
+
+    markRoots();
+
+#ifdef DEBUG_LOG_GC
+    printf("-- gc end\n");
+#endif
 }
 
 void freeObjects() {
