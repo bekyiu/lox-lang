@@ -1,14 +1,2 @@
-{
-    fun test1() {
-        var name = "sb";
-    }
-}
-
-
-fun main() {
-    print "finished";
-}
-
-
-
-
+class Brioche {}
+print Brioche();
