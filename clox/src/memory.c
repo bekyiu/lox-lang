@@ -9,12 +9,18 @@
 
 #endif
 
+#define GC_HEAP_GROW_FACTOR 2
+
 void *reallocate(void *pointer, size_t oldSize, size_t newSize) {
+    vm.bytesAllocated += newSize - oldSize;
     // 在要申请内存的时候 触发一次gc
     if (newSize > oldSize) {
 #ifdef DEBUG_STRESS_GC
         collectGarbage();
 #endif
+        if (vm.bytesAllocated > vm.nextGC) {
+            collectGarbage();
+        }
     }
 
     if (newSize == 0) {
@@ -92,7 +98,7 @@ static void blackenObject(Obj *object) {
 
 static void freeObject(Obj *object) {
 #ifdef DEBUG_LOG_GC
-    printf("%p free type %d\n", (void *) object, object->type);
+    printf("\033[32m%p free type %d\033[0m\n", (void *) object, object->type);
 #endif
     switch (object->type) {
         case OBJ_CLOSURE: {
@@ -178,6 +184,7 @@ static void sweep() {
 void collectGarbage() {
 #ifdef DEBUG_LOG_GC
     printf("-- gc begin\n");
+    size_t before = vm.bytesAllocated;
 #endif
 
     markRoots();
@@ -192,8 +199,11 @@ void collectGarbage() {
     // 而可达的对象一定是标记过的, 所以我们只要清楚没标记过的对象即可
     sweep();
 
+    vm.nextGC = vm.bytesAllocated * GC_HEAP_GROW_FACTOR;
 #ifdef DEBUG_LOG_GC
     printf("-- gc end\n");
+    printf("   \033[31mcollected %zu bytes (from %zu to %zu) next at %zu\033[0m\n",
+           before - vm.bytesAllocated, before, vm.bytesAllocated, vm.nextGC);
 #endif
 }
 

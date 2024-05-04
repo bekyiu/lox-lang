@@ -37,6 +37,10 @@ typedef struct {
     Table strings;
     // 所有的upvalue
     ObjUpvalue *openUpvalues;
+    // 已分配内存的字节数
+    size_t bytesAllocated;
+    // 触发下次gc的字节阈值
+    size_t nextGC;
     // lox对象链表
     Obj *objects;
     // 灰色对象列表 存储 Obj*

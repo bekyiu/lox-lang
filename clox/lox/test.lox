@@ -1,2 +1,14 @@
-var a = "haha";
-print a;
+{
+    fun test1() {
+        var name = "sb";
+    }
+}
+
+
+fun main() {
+    print "finished";
+}
+
+
+
+

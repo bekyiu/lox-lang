@@ -146,8 +146,8 @@ static bool isFalsey(Value value) {
 // 字符串拼接
 static void concatenate() {
     // gc会free这些被pop的字符串
-    ObjString *b = AS_STRING(pop());
-    ObjString *a = AS_STRING(pop());
+    ObjString *b = AS_STRING(peek(0));
+    ObjString *a = AS_STRING(peek(1));
 
     int len = a->length + b->length;
     char *str = ALLOCATE(char, len + 1);
@@ -156,6 +156,8 @@ static void concatenate() {
     str[len] = '\0';
 
     ObjString *ret = takeString(str, len);
+    pop();
+    pop();
     push(OBJ_VAL(ret));
 }
 
@@ -167,6 +169,8 @@ void initVM() {
     resetStack();
     vm.objects = NULL;
     vm.grayCount = 0;
+    vm.bytesAllocated = 0;
+    vm.nextGC = 1024 * 1024;
     vm.grayCapacity = 0;
     vm.grayStack = NULL;
     initTable(&vm.globals);

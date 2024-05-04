@@ -15,7 +15,7 @@
 #define DEBUG_TRACE_EXECUTION
 
 // 开启后 会尽可能的触发gc
-#define DEBUG_STRESS_GC
+// #define DEBUG_STRESS_GC
 
 #define DEBUG_LOG_GC
 
