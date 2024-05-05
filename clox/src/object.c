@@ -87,6 +87,9 @@ static void printFunction(ObjFunction *function) {
 
 void printObject(Value value) {
     switch (OBJ_TYPE(value)) {
+        case OBJ_BOUND_METHOD:
+            printFunction(AS_BOUND_METHOD(value)->method->function);
+            break;
         case OBJ_CLASS:
             printf("%s", AS_CLASS(value)->name->chars);
             break;
@@ -109,6 +112,13 @@ void printObject(Value value) {
             printf("upvalue");
             break;
     }
+}
+
+ObjBoundMethod *newBoundMethod(Value receiver, ObjClosure *method) {
+    ObjBoundMethod *bound = ALLOCATE_OBJ(ObjBoundMethod, OBJ_BOUND_METHOD);
+    bound->receiver = receiver;
+    bound->method = method;
+    return bound;
 }
 
 ObjFunction *newFunction() {

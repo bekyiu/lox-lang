@@ -1,8 +1,10 @@
-class Brunch {
-  bacon() {
-    return 10;
-  }
-  eggs() {
-    print "I am eggs";
-  }
+class A {
+    method() {
+        fun function() {
+            print this;
+        }
+        function();
+    }
 }
+
+A().method();
