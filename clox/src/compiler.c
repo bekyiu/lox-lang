@@ -100,6 +100,8 @@ static void or(bool canAssign);
 
 static void call(bool canAssign);
 
+static void dot(bool canAssign);
+
 
 static void statement();
 
@@ -113,7 +115,7 @@ ParseRule rules[] = {
         [TOKEN_LEFT_BRACE]    = {NULL, NULL, PREC_NONE},
         [TOKEN_RIGHT_BRACE]   = {NULL, NULL, PREC_NONE},
         [TOKEN_COMMA]         = {NULL, NULL, PREC_NONE},
-        [TOKEN_DOT]           = {NULL, NULL, PREC_NONE},
+        [TOKEN_DOT]           = {NULL, dot, PREC_CALL},
         [TOKEN_MINUS]         = {unary, binary, PREC_TERM},
         [TOKEN_PLUS]          = {NULL, binary, PREC_TERM},
         [TOKEN_SEMICOLON]     = {NULL, NULL, PREC_NONE},
@@ -923,6 +925,7 @@ static void classDeclaration() {
     uint8_t nameConstant = identifierConstant(&parser.previous);
     declareVariable();
 
+    // 执行完这句后类对象留在栈顶
     emitBytes(OP_CLASS, nameConstant);
     defineVariable(nameConstant);
 
@@ -957,6 +960,18 @@ static uint8_t argumentList() {
 static void call(bool canAssign) {
     uint8_t argCount = argumentList();
     emitBytes(OP_CALL, argCount);
+}
+
+static void dot(bool canAssign) {
+    consume(TOKEN_IDENTIFIER, "Expect property name after '.'.");
+    uint8_t name = identifierConstant(&parser.previous);
+
+    if (canAssign && match(TOKEN_EQUAL)) {
+        expression();
+        emitBytes(OP_SET_PROPERTY, name);
+    } else {
+        emitBytes(OP_GET_PROPERTY, name);
+    }
 }
 
 static void declaration() {
