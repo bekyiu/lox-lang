@@ -60,6 +60,7 @@ typedef struct {
 typedef struct {
     Obj obj;
     ObjString *name;
+    Table methods;
 } ObjClass;
 
 typedef struct {
@@ -109,7 +110,7 @@ ObjNative *newNative(NativeFn function);
 
 ObjFunction *newFunction();
 
-ObjInstance* newInstance(ObjClass* klass);
+ObjInstance *newInstance(ObjClass *klass);
 
 ObjClass *newClass(ObjString *name);
 
