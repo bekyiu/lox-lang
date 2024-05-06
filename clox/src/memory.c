@@ -181,6 +181,7 @@ static void markRoots() {
     markTable(&vm.globals);
     // 编译期也可能会触发gc
     markCompilerRoots();
+    markObject((Obj *) vm.initString);
 }
 
 // 遍历灰色对象的引用, 把引用的对象变成灰色, 然后把自己变成黑色

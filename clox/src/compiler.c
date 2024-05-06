@@ -56,6 +56,7 @@ typedef struct {
 
 typedef enum {
     TYPE_FUNCTION,
+    TYPE_INITIALIZER,
     TYPE_METHOD,
     TYPE_SCRIPT
 } FunctionType;
@@ -272,8 +273,13 @@ static void emitBytes(uint8_t byte1, uint8_t byte2) {
 }
 
 static void emitReturn() {
-    // 无论如何都返回一个null
-    emitByte(OP_NIL);
+    if (current->type == TYPE_INITIALIZER) {
+        // 返回this
+        emitBytes(OP_GET_LOCAL, 0);
+    } else {
+        // 无论如何都要有返回值
+        emitByte(OP_NIL);
+    }
     emitByte(OP_RETURN);
 }
 
@@ -666,6 +672,9 @@ static void returnStatement() {
         // 这里会压入null作为返回值
         emitReturn();
     } else {
+        if (current->type == TYPE_INITIALIZER) {
+            error("Can't return a value from an initializer.");
+        }
         expression();
         consume(TOKEN_SEMICOLON, "Expect ';' after return value.");
         emitByte(OP_RETURN);
@@ -947,6 +956,10 @@ static void method() {
     consume(TOKEN_IDENTIFIER, "Expect method name.");
     uint8_t constant = identifierConstant(&parser.previous);
     FunctionType type = TYPE_METHOD;
+    // 构造函数单独标识
+    if (parser.previous.length == 4 && memcmp(parser.previous.start, "init", 4) == 0) {
+        type = TYPE_INITIALIZER;
+    }
     function(type);
     emitBytes(OP_METHOD, constant);
 }

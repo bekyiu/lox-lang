@@ -35,6 +35,8 @@ typedef struct {
     // 字符串驻留集合
     // 用于存储所有运行时创建的字符串(去重)
     Table strings;
+    // 构造函数的名字
+    ObjString *initString;
     // 所有的upvalue
     ObjUpvalue *openUpvalues;
     // 已分配内存的字节数
