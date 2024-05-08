@@ -978,6 +978,19 @@ static void classDeclaration() {
     classCompiler.enclosing = currentClass;
     currentClass = &classCompiler;
 
+    if (match(TOKEN_LESS)) {
+        consume(TOKEN_IDENTIFIER, "Expect superclass name.");
+        variable(false);
+        if (identifiersEqual(&className, &parser.previous)) {
+            error("A class can't inherit from itself.");
+        }
+        namedVariable(className, false);
+        //       ->
+        // 栈底: 父类 当前类
+        emitByte(OP_INHERIT);
+        // 这里后面才发出OP_METHOD指令, 所以"重写"是很自然的事情
+    }
+
     // 在上面的 defineVariable 中, 如果是全局变量, 那在定义完之后会pop栈顶的类对象
     // 这句让类对象一定留在栈顶
     namedVariable(className, false);
