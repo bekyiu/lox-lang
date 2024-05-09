@@ -80,6 +80,7 @@ typedef struct {
 typedef struct ClassCompiler {
     // 指向外层类
     struct ClassCompiler *enclosing;
+    bool hasSuperclass;
 } ClassCompiler;
 
 Parser parser;
@@ -113,6 +114,7 @@ static void dot(bool canAssign);
 
 static void this_(bool canAssign);
 
+static void super_(bool canAssign);
 
 static void statement();
 
@@ -154,7 +156,7 @@ ParseRule rules[] = {
         [TOKEN_OR]            = {NULL, or, PREC_OR},
         [TOKEN_PRINT]         = {NULL, NULL, PREC_NONE},
         [TOKEN_RETURN]        = {NULL, NULL, PREC_NONE},
-        [TOKEN_SUPER]         = {NULL, NULL, PREC_NONE},
+        [TOKEN_SUPER]         = {super_, NULL, PREC_NONE},
         [TOKEN_THIS]          = {this_, NULL, PREC_NONE},
         [TOKEN_TRUE]          = {literal, NULL, PREC_NONE},
         [TOKEN_VAR]           = {NULL, NULL, PREC_NONE},
@@ -913,6 +915,30 @@ static void variable(bool canAssign) {
     namedVariable(parser.previous, canAssign);
 }
 
+static Token syntheticToken(const char *text) {
+    Token token;
+    token.start = text;
+    token.length = (int) strlen(text);
+    return token;
+}
+
+static void super_(bool canAssign) {
+    if (currentClass == NULL) {
+        error("Can't use 'super' outside of a class.");
+    } else if (!currentClass->hasSuperclass) {
+        error("Can't use 'super' in a class with no superclass.");
+    }
+
+    // super标识不是一个独立的表达式 它后面的点和方法名称是语法中不可分割的部分
+    consume(TOKEN_DOT, "Expect '.' after 'super'.");
+    consume(TOKEN_IDENTIFIER, "Expect superclass method name.");
+    uint8_t name = identifierConstant(&parser.previous);
+
+    namedVariable(syntheticToken("this"), false);
+    namedVariable(syntheticToken("super"), false);
+    emitBytes(OP_GET_SUPER, name);
+}
+
 static void this_(bool canAssign) {
     if (currentClass == NULL) {
         error("Can't use 'this' outside of a class.");
@@ -975,6 +1001,7 @@ static void classDeclaration() {
     defineVariable(nameConstant);
 
     ClassCompiler classCompiler;
+    classCompiler.hasSuperclass = false;
     classCompiler.enclosing = currentClass;
     currentClass = &classCompiler;
 
@@ -984,10 +1011,34 @@ static void classDeclaration() {
         if (identifiersEqual(&className, &parser.previous)) {
             error("A class can't inherit from itself.");
         }
+
+        /*
+         class A {}
+         class B < A { m2() {} }
+         ================
+         class A {}
+         class B < A {
+            {
+                // 这个变量是方法主体之外的一个局部变量
+                super
+                m2() {
+                    // 这里可以捕获到super
+                }
+            }
+         }
+
+         把super放在一个局部作用域 否则如果我们在最外层 (或者同一局部作用域内) 有两个类都有父类, super的定义会冲突 -- 都在全局table中
+         this不会冲突 是因为this是一个方法内的局部变量
+         */
+        beginScope();
+        addLocal(syntheticToken("super"));
+        defineVariable(0);
+
         namedVariable(className, false);
         //       ->
         // 栈底: 父类 当前类
         emitByte(OP_INHERIT);
+        classCompiler.hasSuperclass = true;
         // 这里后面才发出OP_METHOD指令, 所以"重写"是很自然的事情
     }
 
@@ -1001,6 +1052,11 @@ static void classDeclaration() {
     consume(TOKEN_RIGHT_BRACE, "Expect '}' after class body.");
     // 弹出类对象
     emitByte(OP_POP);
+
+    if (classCompiler.hasSuperclass) {
+        // 丢弃 super
+        endScope();
+    }
 
     currentClass = currentClass->enclosing;
 }
