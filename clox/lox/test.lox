@@ -1,23 +1,15 @@
 class A {
-  method() {
-    print "A method";
+  init() {
+    this.a = 99;
   }
 }
 
 class B < A {
-  method() {
-    print "B method";
-  }
-
-  test() {
-    // 这里闭包捕获了super
-    // super 是 A class
-    super.method();
+  init() {
+    super.init();
   }
 }
 
-// 这里 test方法被拷贝到C中
-class C < B {}
+var obj = B();
+print obj.a;
 
-var obj = C();
-obj.test();
